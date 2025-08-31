@@ -1,0 +1,70 @@
+@import "tailwindcss";
+
+:root {
+  --primary: #3a7c8c;
+  --secondary: #e2b894;
+  --accent: #c46d5e;
+  --light: #f8f5f1;
+  --dark: #2d3e40;
+
+  --header-bg: var(--primary);
+  --text-color: #000;
+  --bg-color: #f5f7f9;
+}
+
+[data-theme="dark"] {
+  --primary: #1e293b;
+  --secondary: #475569;
+  --accent: #64748b;
+  --light: #1e293b;
+  --dark: #f1f5f9;
+
+  --header-bg: var(--primary);
+  --text-color: #fff;
+  --bg-color: #0f172a;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: var(--bg-color);
+  color: var(--text-color);
+}
+
+@layer components {
+  .sidebar-link.active {
+    background-color: rgb(238 242 255);
+    border-left: 4px solid var(--primary);
+    color: var(--primary);
+  }
+
+  .stat-card {
+    transition: all 0.3s ease-in-out;
+  }
+
+  .stat-card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  }
+
+  .btn-primary {
+    background-color: var(--primary);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 0.375rem;
+  }
+
+  .btn-primary:hover {
+    filter: brightness(0.9);
+  }
+
+  .btn-secondary {
+    background-color: rgb(229 231 235);
+    color: rgb(31 41 55);
+    padding: 0.5rem 1rem;
+    border-radius: 0.375rem;
+  }
+
+  .btn-secondary:hover {
+    background-color: rgb(209 213 219);
+  }
+}
