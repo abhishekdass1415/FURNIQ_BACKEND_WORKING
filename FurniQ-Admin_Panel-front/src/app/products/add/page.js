@@ -1,26 +1,48 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useProducts } from '@/context/ProductContext' // added
 import Link from 'next/link'
 
-const categories = [
-  { id: 1, name: 'Sofas ', subcategories: [{ id: 101, name: 'Sectional Sofas' }, { id: 102, name: 'Loveseats' }] },
-  { id: 2, name: 'Dining Tables', subcategories: [{ id: 201, name: 'Wooden Dining Tables' }] },
-  { id: 3, name: 'Beds', subcategories: [{ id: 301, name: 'King Size Beds' }, { id: 302, name: 'Queen Size Beds' }] },
-]
-
+// Categories will be fetched from backend API
 export default function AddProduct() {
   const router = useRouter()
   const { addProduct } = useProducts() // added
   const [newProduct, setNewProduct] = useState({
     name: '', sku: '', category: '', subcategory: '', price: '', stock: '', lowStock: '', brand: '', color: '', material: '', warranty: '', imageUrl: '', description: ''
   })
+  const [categories, setCategories] = useState([])
+  const [allCategories, setAllCategories] = useState([]) // Store all categories including subcategories
+
+  // Fetch categories from backend API
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/categories`)
+        if (response.ok) {
+          const data = await response.json()
+          setAllCategories(data)
+          
+          // Filter main categories (those without parentId) for the main dropdown
+          const mainCategories = data.filter(category => !category.parentId)
+          setCategories(mainCategories)
+        }
+      } catch (error) {
+        console.error('Error fetching categories:', error)
+      }
+    }
+    fetchCategories()
+  }, [])
 
   const getSubcategories = () => {
     if (!newProduct.category) return []
-    return categories.find(c => c.name === newProduct.category)?.subcategories || []
+    // Find the selected category by name and get its subcategories
+    const selectedCategory = categories.find(c => c.name === newProduct.category)
+    if (!selectedCategory) return []
+    
+    // Find all subcategories that have this category as parent
+    return allCategories.filter(cat => cat.parentId === selectedCategory.id)
   }
 
   const handleAddProduct = (e) => {
@@ -29,7 +51,15 @@ export default function AddProduct() {
     router.push('/products')
   }
 
-  const handleChange = (e) => setNewProduct({ ...newProduct, [e.target.name]: e.target.value })
+  const handleChange = (e) => {
+    const { name, value } = e.target
+    if (name === 'category') {
+      // Reset subcategory when category changes
+      setNewProduct({ ...newProduct, [name]: value, subcategory: '' })
+    } else {
+      setNewProduct({ ...newProduct, [name]: value })
+    }
+  }
 
   return (
     <div className="md:ml-64 pt-16">

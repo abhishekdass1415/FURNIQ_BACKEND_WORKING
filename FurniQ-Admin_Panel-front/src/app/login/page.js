@@ -20,7 +20,7 @@ export default function Login() {
       console.log('Logging in with:', email, password)
       
       // Import API service dynamically to avoid SSR issues
-      const { getApiService } = await import('../../lib/apiHelper.js')
+      const { getApiService } = await import('../../../lib/apiHelper.js')
       
       try {
         const apiService = await getApiService()
@@ -132,6 +132,17 @@ export default function Login() {
           </button>
         </form>
         
+        <div className="mt-6 text-center">
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            Don't have an account?{' '}
+            <a 
+              href="/register" 
+              className="font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300"
+            >
+              Register here
+            </a>
+          </p>
+        </div>
         
       </div>
     </div>

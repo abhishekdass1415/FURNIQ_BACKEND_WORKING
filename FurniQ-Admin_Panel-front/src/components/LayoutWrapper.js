@@ -7,7 +7,7 @@ import Header from "@/components/Header";
 
 export default function LayoutWrapper({ children }) {
   const pathname = usePathname();
-  const hideLayout = pathname === "/login";
+  const hideLayout = pathname === "/login" || pathname === "/register";
 
   if (hideLayout) return <>{children}</>;
 

@@ -1,76 +1,131 @@
 'use client'
 
-import { useState } from 'react'
-
-// ✅ Sample categories with subcategories
-const initialCategories = [
-  {
-    id: 1,
-    name: 'Sofas & Couches',
-    imageUrl: 'https://via.placeholder.com/150',
-    subcategories: [
-      { id: 101, name: 'Sectional Sofas', imageUrl: 'https://via.placeholder.com/100' },
-      { id: 102, name: 'Loveseats', imageUrl: 'https://via.placeholder.com/100' },
-    ]
-  },
-  {
-    id: 2,
-    name: 'Dining Tables',
-    imageUrl: 'https://via.placeholder.com/150',
-    subcategories: [
-      { id: 201, name: 'Wooden Dining Tables', imageUrl: 'https://via.placeholder.com/100' },
-      { id: 202, name: 'Glass Dining Tables', imageUrl: 'https://via.placeholder.com/100' },
-    ]
-  }
-]
+import { useState, useEffect } from 'react'
 
 export default function CategoryManagement() {
-  const [categories, setCategories] = useState(initialCategories)
+  const [categories, setCategories] = useState([])
+  const [loading, setLoading] = useState(true)
   const [showAddCategory, setShowAddCategory] = useState(false)
   const [showAddSubcategory, setShowAddSubcategory] = useState(false)
   const [selectedCategory, setSelectedCategory] = useState('')
-  const [newCategory, setNewCategory] = useState({ name: '', imageUrl: '' })
+  const [newCategory, setNewCategory] = useState({ name: '' })
   const [newSubcategory, setNewSubcategory] = useState({ name: '', imageUrl: '' })
   const [editingCategory, setEditingCategory] = useState(null)
   const [editingSubcategory, setEditingSubcategory] = useState(null)
 
-  const handleAddCategory = (e) => {
-    e.preventDefault()
-    const category = {
-      id: Date.now(),
-      name: newCategory.name,
-      imageUrl: newCategory.imageUrl || 'https://via.placeholder.com/150',
-      subcategories: []
+  // Fetch categories from backend API
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        setLoading(true)
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/categories`)
+        if (response.ok) {
+          const data = await response.json()
+          
+          // Filter main categories (those without parentId) and group their subcategories
+          const mainCategories = data.filter(category => !category.parentId)
+          const categoriesWithSubcategories = mainCategories.map(category => ({
+            ...category,
+            subcategories: data.filter(sub => sub.parentId === category.id)
+          }))
+          
+          setCategories(categoriesWithSubcategories)
+        } else {
+          console.error('Failed to fetch categories')
+          setCategories([])
+        }
+      } catch (error) {
+        console.error('Error fetching categories:', error)
+        setCategories([])
+      } finally {
+        setLoading(false)
+      }
     }
-    setCategories([...categories, category])
-    setNewCategory({ name: '', imageUrl: '' })
-    setShowAddCategory(false)
+    fetchCategories()
+  }, [])
+
+  // ✅ Add Category
+  const handleAddCategory = async (e) => {
+    e.preventDefault()
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/categories`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: newCategory.name
+        })
+      })
+      
+      if (response.ok) {
+        const newCategoryData = await response.json()
+        // Ensure new category has subcategories array
+        const categoryWithSubcategories = {
+          ...newCategoryData,
+          subcategories: []
+        }
+        setCategories([...categories, categoryWithSubcategories])
+        setNewCategory({ name: '' })
+        setShowAddCategory(false)
+      } else {
+        console.error('Failed to add category')
+      }
+    } catch (error) {
+      console.error('Error adding category:', error)
+    }
   }
 
-  const handleAddSubcategory = (e) => {
+  // ✅ Add Subcategory
+  const handleAddSubcategory = async (e) => {
     e.preventDefault()
     if (!selectedCategory) return
 
-    const subcategory = {
-      id: Date.now(),
-      name: newSubcategory.name,
-      imageUrl: newSubcategory.imageUrl || 'https://via.placeholder.com/100'
-    }
-
-    const updatedCategories = categories.map(category => {
-      if (category.id === parseInt(selectedCategory)) {
-        return {
-          ...category,
-          subcategories: [...category.subcategories, subcategory]
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/categories`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: newSubcategory.name,
+          parentId: selectedCategory,
+          imageUrl: newSubcategory.imageUrl || ''
+        })
+      })
+      
+      if (response.ok) {
+        const newSubcategoryData = await response.json()
+        // Refresh categories to get the updated list with subcategories
+        const fetchCategories = async () => {
+          try {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/categories`)
+            if (response.ok) {
+              const data = await response.json()
+              // Filter main categories (those without parentId) and group their subcategories
+              const mainCategories = data.filter(category => !category.parentId)
+              const categoriesWithSubcategories = mainCategories.map(category => ({
+                ...category,
+                subcategories: data.filter(sub => sub.parentId === category.id)
+              }))
+              setCategories(categoriesWithSubcategories)
+            }
+          } catch (error) {
+            console.error('Error fetching categories:', error)
+          }
         }
+        await fetchCategories()
+        setNewSubcategory({ name: '', imageUrl: '' })
+        setShowAddSubcategory(false)
+      } else {
+        console.error('Failed to add subcategory')
       }
-      return category
-    })
-    setCategories(updatedCategories)
-    setNewSubcategory({ name: '', imageUrl: '' })
-    setShowAddSubcategory(false)
+    } catch (error) {
+      console.error('Error adding subcategory:', error)
+    }
   }
 
+  // ✅ Edit Category
   const handleEditCategory = (e) => {
     e.preventDefault()
     const updatedCategories = categories.map(category => {
@@ -78,7 +133,6 @@ export default function CategoryManagement() {
         return {
           ...category,
           name: editingCategory.name,
-          imageUrl: editingCategory.imageUrl
         }
       }
       return category
@@ -87,6 +141,7 @@ export default function CategoryManagement() {
     setEditingCategory(null)
   }
 
+  // ✅ Edit Subcategory
   const handleEditSubcategory = (e) => {
     e.preventDefault()
     const updatedCategories = categories.map(category => {
@@ -111,12 +166,14 @@ export default function CategoryManagement() {
     setEditingSubcategory(null)
   }
 
+  // ✅ Delete Category
   const handleDeleteCategory = (id) => {
     if (window.confirm('Delete this category and all its subcategories?')) {
       setCategories(categories.filter(category => category.id !== id))
     }
   }
 
+  // ✅ Delete Subcategory
   const handleDeleteSubcategory = (categoryId, subcategoryId) => {
     if (window.confirm('Delete this subcategory?')) {
       const updatedCategories = categories.map(category => {
@@ -162,15 +219,7 @@ export default function CategoryManagement() {
                   required
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Image URL</label>
-                <input
-                  type="url"
-                  value={newCategory.imageUrl}
-                  onChange={(e) => setNewCategory({ ...newCategory, imageUrl: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                />
-              </div>
+             
               <div className="md:col-span-2 flex justify-end space-x-3">
                 <button type="button" className="btn-secondary" onClick={() => setShowAddCategory(false)}>Cancel</button>
                 <button type="submit" className="btn-primary">Add Category</button>
@@ -233,8 +282,13 @@ export default function CategoryManagement() {
             <h3 className="text-lg font-medium text-gray-800">Categories & Subcategories</h3>
           </div>
           <div className="px-4 py-5">
-            <div className="space-y-6">
-              {categories.map(category => (
+            {loading ? (
+              <div className="text-center py-8">
+                <p className="text-gray-500">Loading categories...</p>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {categories.map(category => (
                 <div key={category.id} className="border rounded-lg p-4">
                   {/* ✅ Edit Category Mode */}
                   {editingCategory && editingCategory.id === category.id ? (
@@ -248,14 +302,7 @@ export default function CategoryManagement() {
                         className="w-full px-3 py-2 border rounded-md"
                         required
                       />
-                      <input
-                        type="url"
-                        value={editingCategory.imageUrl}
-                        onChange={(e) =>
-                          setEditingCategory({ ...editingCategory, imageUrl: e.target.value })
-                        }
-                        className="w-full px-3 py-2 border rounded-md"
-                      />
+                      
                       <div className="flex space-x-2">
                         <button type="submit" className="btn-primary">Save</button>
                         <button type="button" className="btn-secondary" onClick={() => setEditingCategory(null)}>Cancel</button>
@@ -277,7 +324,7 @@ export default function CategoryManagement() {
                   {/* Subcategories */}
                   <div className="pl-4">
                     <h5 className="text-sm font-medium text-gray-700 mb-2">Subcategories:</h5>
-                    {category.subcategories.length > 0 ? (
+                    {category.subcategories && category.subcategories.length > 0 ? (
                       <ul className="space-y-2">
                         {category.subcategories.map(sub => (
                           <li key={sub.id} className="flex justify-between items-center">
@@ -327,11 +374,12 @@ export default function CategoryManagement() {
                   </div>
                 </div>
               ))}
-            </div>
+              </div>
+            )}
           </div>
         </div>
 
       </div>
-    </div>
-  )
+    </div>
+  )
 }

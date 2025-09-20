@@ -5,25 +5,50 @@ import { useRouter, useParams } from 'next/navigation'
 import { useProducts } from '@/context/ProductContext'
 import Link from 'next/link'
 
-const categories = [
-  { id: 1, name: 'Sofas & Couches', subcategories: [{ id: 101, name: 'Sectional Sofas' }, { id: 102, name: 'Loveseats' }] },
-  { id: 2, name: 'Dining Tables', subcategories: [{ id: 201, name: 'Wooden Dining Tables' }] },
-  { id: 3, name: 'Beds', subcategories: [{ id: 301, name: 'King Size Beds' }, { id: 302, name: 'Queen Size Beds' }] },
-]
-
+// Categories will be fetched from backend API
 export default function EditProduct() {
   const router = useRouter()
   const params = useParams()
   const { products, updateProduct } = useProducts() // use context
   const productId = parseInt(params.id)
   const [product, setProduct] = useState(null)
+  const [categories, setCategories] = useState([])
+  const [allCategories, setAllCategories] = useState([]) // Store all categories including subcategories
 
   useEffect(() => {
     const productData = products.find(p => p.id === productId)
     if (productData) setProduct(productData)
   }, [productId, products])
 
-  const handleChange = (e) => setProduct({ ...product, [e.target.name]: e.target.value })
+  // Fetch categories from backend API
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/categories`)
+        if (response.ok) {
+          const data = await response.json()
+          setAllCategories(data)
+          
+          // Filter main categories (those without parentId) for the main dropdown
+          const mainCategories = data.filter(category => !category.parentId)
+          setCategories(mainCategories)
+        }
+      } catch (error) {
+        console.error('Error fetching categories:', error)
+      }
+    }
+    fetchCategories()
+  }, [])
+
+  const handleChange = (e) => {
+    const { name, value } = e.target
+    if (name === 'category') {
+      // Reset subcategory when category changes
+      setProduct({ ...product, [name]: value, subcategory: '' })
+    } else {
+      setProduct({ ...product, [name]: value })
+    }
+  }
 
   const handleUpdate = (e) => {
     e.preventDefault()
@@ -33,7 +58,15 @@ export default function EditProduct() {
 
   if (!product) return <p>Loading...</p>
 
-  const getSubcategories = () => categories.find(c => c.name === product.category)?.subcategories || []
+  const getSubcategories = () => {
+    if (!product.category) return []
+    // Find the selected category by name and get its subcategories
+    const selectedCategory = categories.find(c => c.name === product.category)
+    if (!selectedCategory) return []
+    
+    // Find all subcategories that have this category as parent
+    return allCategories.filter(cat => cat.parentId === selectedCategory.id)
+  }
 
   return (
     <div className="md:ml-64 pt-16">

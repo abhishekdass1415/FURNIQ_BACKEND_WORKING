@@ -1,22 +1,42 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useProducts } from '@/context/ProductContext' // use context
 import Link from 'next/link'
 
-const categories = [
-  { id: 1, name: 'Sofas ', subcategories: [{ id: 101, name: 'Sectional Sofas' }, { id: 102, name: 'Loveseats' }] },
-  { id: 2, name: 'Dining Tables', subcategories: [{ id: 201, name: 'Wooden Dining Tables' }] },
-  { id: 3, name: 'Beds', subcategories: [{ id: 301, name: 'King Size Beds' }, { id: 302, name: 'Queen Size Beds' }] },
-]
-
+// Categories will be fetched from backend API
 export default function Products() {
   const { products, loading, error, deleteProduct, getStockStatus, refreshProducts } = useProducts()
   const [selectedCategory, setSelectedCategory] = useState('')
   const [selectedSubcategory, setSelectedSubcategory] = useState('')
+  const [categories, setCategories] = useState([])
+  const [allCategories, setAllCategories] = useState([]) // Store all categories including subcategories
+
+  // Fetch categories from backend API
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/categories`)
+        if (response.ok) {
+          const data = await response.json()
+          setAllCategories(data)
+          
+          // Filter main categories (those without parentId) for the main dropdown
+          const mainCategories = data.filter(category => !category.parentId)
+          setCategories(mainCategories)
+        }
+      } catch (error) {
+        console.error('Error fetching categories:', error)
+      }
+    }
+    fetchCategories()
+  }, [])
 
   const filteredSubcategories = selectedCategory
-    ? categories.find(cat => cat.name === selectedCategory)?.subcategories || []
+    ? allCategories.filter(cat => {
+        const selectedCat = categories.find(c => c.name === selectedCategory)
+        return selectedCat && cat.parentId === selectedCat.id
+      })
     : []
 
   const filteredProducts = products.filter(product => {

@@ -1,6 +1,7 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useInventory } from "@/context/Inventorycontext";
+import { useProducts } from "@/context/ProductContext";
 
 // A reusable date formatting component that only runs on the client
 function ClientDate({ date }) {
@@ -10,72 +11,42 @@ function ClientDate({ date }) {
 }
 
 export default function InventoryLogs() {
-  const { updateStock } = useInventory();
-
-  const [logs, setLogs] = useState([
-    {
-      id: 1,
-      productId: "P001",
-      change: 10,
-      reason: "Stock Added",
-      notes: "New shipment arrived",
-      createdAt: new Date().toISOString(),
-      userId: "admin123",
-    },
-    {
-      id: 2,
-      productId: "P002",
-      change: -5,
-      reason: "Order Shipped",
-      notes: "Shipped to customer",
-      createdAt: new Date().toISOString(),
-      userId: "staff456",
-    },
-  ]);
+  const { inventoryLogs, loading, error, createInventoryLog, fetchInventoryLogs } = useInventory();
+  const { products } = useProducts();
 
   const [form, setForm] = useState({
     productId: "",
     change: "",
     reason: "",
     notes: "",
-    userId: "",
   });
 
   const [editingId, setEditingId] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleAddLog = () => {
+  const handleAddLog = async () => {
     if (!form.productId || !form.change || !form.reason) return;
 
-    if (editingId) {
-      // Update existing log
-      setLogs((prev) =>
-        prev.map((log) =>
-          log.id === editingId
-            ? { ...log, ...form, change: parseInt(form.change, 10) }
-            : log
-        )
-      );
-
-      // 🔥 Also update stock when editing
-      updateStock(form.productId, parseInt(form.change, 10));
-
-      setEditingId(null);
-    } else {
-      // Add new log
-      const newLog = {
-        id: logs.length + 1,
-        ...form,
+    setIsSubmitting(true);
+    try {
+      const logData = {
+        productId: form.productId,
         change: parseInt(form.change, 10),
-        createdAt: new Date().toISOString(),
+        reason: form.reason,
+        notes: form.notes || ''
       };
 
-      setLogs((prev) => [...prev, newLog]);
-
-      // 🔥 Update inventory stock
-      updateStock(newLog.productId, newLog.change);
+      await createInventoryLog(logData);
+      
+      // Reset form
+      setForm({ productId: "", change: "", reason: "", notes: "" });
+      setEditingId(null);
+    } catch (error) {
+      console.error('Error creating inventory log:', error);
+      alert('Failed to create inventory log. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
-
-    setForm({ productId: "", change: "", reason: "", notes: "", userId: "" });
   };
 
   const handleEdit = (log) => {
@@ -83,8 +54,7 @@ export default function InventoryLogs() {
       productId: log.productId,
       change: log.change,
       reason: log.reason,
-      notes: log.notes,
-      userId: log.userId,
+      notes: log.notes || '',
     });
     setEditingId(log.id);
   };
@@ -94,10 +64,9 @@ export default function InventoryLogs() {
       "Are you sure you want to delete this log?"
     );
     if (confirmDelete) {
-      setLogs((prev) => prev.filter((log) => log.id !== id));
-      // ❌ Optional: reverse stock change when deleting log
-      // const deletedLog = logs.find((l) => l.id === id);
-      // if (deletedLog) updateStock(deletedLog.productId, -deletedLog.change);
+      // For now, we'll just log the action
+      // In a real app, you'd make an API call to delete
+      console.log('Delete inventory log:', id);
     }
   };
 
@@ -114,19 +83,26 @@ export default function InventoryLogs() {
             {editingId ? "Edit Log" : "Add New Log"}
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <input
-              type="text"
-              placeholder="Product ID"
+            <select
               value={form.productId}
               onChange={(e) => setForm({ ...form, productId: e.target.value })}
               className="border rounded p-2"
-            />
+              required
+            >
+              <option value="">Select Product</option>
+              {products.map(product => (
+                <option key={product.id} value={product.id}>
+                  {product.name} (SKU: {product.sku})
+                </option>
+              ))}
+            </select>
             <input
               type="number"
               placeholder="Change (+/-)"
               value={form.change}
               onChange={(e) => setForm({ ...form, change: e.target.value })}
               className="border rounded p-2"
+              required
             />
             <input
               type="text"
@@ -134,27 +110,22 @@ export default function InventoryLogs() {
               value={form.reason}
               onChange={(e) => setForm({ ...form, reason: e.target.value })}
               className="border rounded p-2"
+              required
             />
             <input
               type="text"
-              placeholder="Notes"
+              placeholder="Notes (optional)"
               value={form.notes}
               onChange={(e) => setForm({ ...form, notes: e.target.value })}
-              className="border rounded p-2"
-            />
-            <input
-              type="text"
-              placeholder="User ID"
-              value={form.userId}
-              onChange={(e) => setForm({ ...form, userId: e.target.value })}
               className="border rounded p-2"
             />
           </div>
           <button
             onClick={handleAddLog}
-            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg"
+            disabled={isSubmitting}
+            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {editingId ? "Update Log" : "Add Log"}
+            {isSubmitting ? "Adding..." : (editingId ? "Update Log" : "Add Log")}
           </button>
           {editingId && (
             <button
@@ -177,48 +148,72 @@ export default function InventoryLogs() {
 
         {/* Logs Table */}
         <div className="bg-white p-6 rounded-xl shadow-md">
-          <h3 className="text-lg font-semibold mb-4">Logs</h3>
-          <table className="w-full border-collapse border text-sm">
-            <thead>
-              <tr className="bg-gray-100">
-                <th className="border px-3 py-2 text-left">Product ID</th>
-                <th className="border px-3 py-2 text-left">Change</th>
-                <th className="border px-3 py-2 text-left">Reason</th>
-                <th className="border px-3 py-2 text-left">Notes</th>
-                <th className="border px-3 py-2 text-left">User ID</th>
-                <th className="border px-3 py-2 text-left">Date</th>
-                <th className="border px-3 py-2 text-left">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {logs.map((log) => (
-                <tr key={log.id}>
-                  <td className="border px-3 py-2">{log.productId}</td>
-                  <td className="border px-3 py-2">{log.change}</td>
-                  <td className="border px-3 py-2">{log.reason}</td>
-                  <td className="border px-3 py-2">{log.notes}</td>
-                  <td className="border px-3 py-2">{log.userId}</td>
-                  <td className="border px-3 py-2">
-                    <ClientDate date={log.createdAt} />
-                  </td>
-                  <td className="border px-3 py-2">
-                    <button
-                      onClick={() => handleEdit(log)}
-                      className="px-2 py-1 bg-yellow-500 text-white rounded mr-2"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleDelete(log.id)}
-                      className="px-2 py-1 bg-red-600 text-white rounded"
-                    >
-                      Delete
-                    </button>
-                  </td>
+          <h3 className="text-lg font-semibold mb-4">Inventory Logs</h3>
+          
+          {loading ? (
+            <div className="text-center py-8">
+              <p className="text-gray-500">Loading inventory logs...</p>
+            </div>
+          ) : error ? (
+            <div className="text-center py-8">
+              <p className="text-red-500">{error}</p>
+            </div>
+          ) : (
+            <table className="w-full border-collapse border text-sm">
+              <thead>
+                <tr className="bg-gray-100">
+                  <th className="border px-3 py-2 text-left">Product</th>
+                  <th className="border px-3 py-2 text-left">Change</th>
+                  <th className="border px-3 py-2 text-left">Reason</th>
+                  <th className="border px-3 py-2 text-left">Notes</th>
+                  <th className="border px-3 py-2 text-left">Date</th>
+                  <th className="border px-3 py-2 text-left">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {inventoryLogs.length === 0 ? (
+                  <tr>
+                    <td colSpan="6" className="border px-3 py-2 text-center text-gray-500">
+                      No inventory logs found
+                    </td>
+                  </tr>
+                ) : (
+                  inventoryLogs.map((log) => {
+                    const product = products.find(p => p.id === log.productId);
+                    return (
+                      <tr key={log.id}>
+                        <td className="border px-3 py-2">
+                          {product ? `${product.name} (${product.sku})` : log.productId}
+                        </td>
+                        <td className={`border px-3 py-2 ${log.change > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          {log.change > 0 ? '+' : ''}{log.change}
+                        </td>
+                        <td className="border px-3 py-2">{log.reason}</td>
+                        <td className="border px-3 py-2">{log.notes || '-'}</td>
+                        <td className="border px-3 py-2">
+                          <ClientDate date={log.createdAt} />
+                        </td>
+                        <td className="border px-3 py-2">
+                          <button
+                            onClick={() => handleEdit(log)}
+                            className="px-2 py-1 bg-yellow-500 text-white rounded mr-2"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleDelete(log.id)}
+                            className="px-2 py-1 bg-red-600 text-white rounded"
+                          >
+                            Delete
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
     </div>

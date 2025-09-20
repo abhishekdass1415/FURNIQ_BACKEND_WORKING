@@ -10,21 +10,9 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        // For now, we'll use mock data since reviews endpoint doesn't exist yet
-        // In the future, you can create a reviews API endpoint
-        const mockReviews = [
-          {
-            customerName: "John Doe",
-            rating: 5,
-            comment: "Excellent furniture quality and fast delivery!"
-          },
-          {
-            customerName: "Jane Smith", 
-            rating: 4,
-            comment: "Great service and beautiful products."
-          }
-        ];
-        setReviews(mockReviews);
+        // TODO: Implement reviews API endpoint
+        // For now, reviews will be empty until API is implemented
+        setReviews([]);
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
       }
