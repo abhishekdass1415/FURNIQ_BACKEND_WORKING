@@ -11,7 +11,7 @@
     "db:push": "npx prisma db push",
     "db:generate": "npx prisma generate",
     "db:studio": "npx prisma studio",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate --schema=./api/prisma/schema.prisma"
   },
   "dependencies": {
     "@prisma/client": "^5.0.0",
