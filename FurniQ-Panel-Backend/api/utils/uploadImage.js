@@ -23,6 +23,4 @@ export const uploadImageToSupabase = async (file) => {
     console.error("Error uploading image:", error);
     return null;
   }
-  //okokpk
 };
-

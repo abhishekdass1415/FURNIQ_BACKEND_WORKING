@@ -74,20 +74,14 @@ model Category {
 }
 
 
-model Customer {
+model User {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  firstName String
-  lastName  String
+  name      String
   email     String   @unique
-  phone     String?
-  address   String?
-  city      String?
-  state     String?
-  zipCode   String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@map("customers")
+  @@map("users") // Collection name in MongoDB
 }
 
 model InventoryLog {
