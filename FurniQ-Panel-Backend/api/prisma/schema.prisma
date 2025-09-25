@@ -73,17 +73,6 @@ model Category {
   @@map("categories")
 }
 
-
-model User {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  name      String
-  email     String   @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("users") // Collection name in MongoDB
-}
-
 model InventoryLog {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
   productId String   @db.ObjectId
