@@ -11,7 +11,7 @@ export default function UserPage() {
     async function fetchUser() {
       try {
         // Replace with your backend URL
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/admin/user`)
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/user`)
         if (!res.ok) throw new Error('Failed to fetch user data')
         const data = await res.json()
         setUser(data)
