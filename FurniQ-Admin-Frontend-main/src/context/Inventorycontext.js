@@ -13,7 +13,7 @@ export function InventoryProvider({ children }) {
   const fetchInventoryLogs = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/inventories`);
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/inventories`);
       if (response.ok) {
         const data = await response.json();
         setInventoryLogs(data);
@@ -39,7 +39,7 @@ export function InventoryProvider({ children }) {
   // Create inventory log entry
   const createInventoryLog = async (logData) => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/inventories`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/inventories`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
