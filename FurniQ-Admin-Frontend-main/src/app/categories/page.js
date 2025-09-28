@@ -20,10 +20,10 @@ export default function CategoryManagement() {
     const fetchCategories = async () => {
       try {
         setLoading(true)
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/categories`)
+        const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL;
+        const response = await fetch(`${API_BASE}/categories`);
         if (response.ok) {
           const data = await response.json()
-          
           // Filter main categories (those without parentId) and group their subcategories
           const mainCategories = data.filter(category => !category.parentId)
           const categoriesWithSubcategories = mainCategories.map(category => ({

@@ -17,7 +17,8 @@ export default function Products() {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/categories`)
+        const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL;
+        const response = await fetch(`${API_BASE}/categories`);
         if (response.ok) {
           const data = await response.json()
           setAllCategories(data)
