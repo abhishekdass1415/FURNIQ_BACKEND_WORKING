@@ -20,7 +20,7 @@ export default function CategoryManagement() {
     const fetchCategories = async () => {
       try {
         setLoading(true)
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/categories`)
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/categories`)
         if (response.ok) {
           const data = await response.json()
           
@@ -50,7 +50,7 @@ export default function CategoryManagement() {
   const handleAddCategory = async (e) => {
     e.preventDefault()
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/categories`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/categories`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -84,7 +84,7 @@ export default function CategoryManagement() {
     if (!selectedCategory) return
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/categories`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/categories`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -101,7 +101,7 @@ export default function CategoryManagement() {
         // Refresh categories to get the updated list with subcategories
         const fetchCategories = async () => {
           try {
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/categories`)
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/categories`)
             if (response.ok) {
               const data = await response.json()
               // Filter main categories (those without parentId) and group their subcategories
