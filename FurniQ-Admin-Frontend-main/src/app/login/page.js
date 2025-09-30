@@ -12,34 +12,39 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false)
   const router = useRouter()
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault()
     setIsLoading(true)
     setError('')
 
     try {
-      // Get stored user from localStorage
-      const storedUser = JSON.parse(localStorage.getItem('userData'))
-      if (!storedUser) {
-        setError('No registered user found. Please register first.')
-        setIsLoading(false)
-        return
+      // **IMPORTANT**: Replace '/api/auth/login' with your actual login API endpoint
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (!response.ok) {
+        // If the server responds with an error (e.g., 401 Unauthorized)
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Incorrect email or password');
       }
 
-      if (email !== storedUser.email || password !== storedUser.password) {
-        setError('Incorrect email or password')
-        setIsLoading(false)
-        return
-      }
+      // If login is successful, the backend should return the user and a token
+      const { user, token } = await response.json();
 
-      // Login success
-      localStorage.setItem('userData', JSON.stringify(storedUser))
-      router.push('/') // redirect to dashboard
+      // Save the token and user data to localStorage
+      localStorage.setItem('authToken', token);
+      localStorage.setItem('userData', JSON.stringify(user));
+      
+      // Redirect to the main dashboard on successful login
+      router.push('/');
+
     } catch (err) {
-      console.error('Login error:', err)
-      setError('Login failed. Please try again.')
-    } finally {
-      setIsLoading(false)
+      // Display any error message from the try block
+      setError(err.message);
+      setIsLoading(false); // Stop loading on error
     }
   }
 

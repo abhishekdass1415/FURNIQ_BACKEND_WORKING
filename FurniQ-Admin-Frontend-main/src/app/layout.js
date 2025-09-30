@@ -1,22 +1,25 @@
-import "./globals.css";
-import LayoutWrapper from "@/components/LayoutWrapper";
-import { InventoryProvider } from "@/context/Inventorycontext";
-import { ProductProvider } from "@/context/ProductContext"; // added
+import './globals.css';
+import { ProductProvider } from '@/context/ProductContext';
+import { InventoryProvider } from '@/context/InventoryContext';
+import LayoutWrapper from '@/components/LayoutWrapper';
 
 export const metadata = {
-  title: "Furniq Furniture Admin",
-  description: "Admin panel for Furniq Furniture",
+  title: 'Admin Dashboard',
+  description: 'Manage your products and inventory',
 };
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body className="bg-[var(--light)] text-[var(--dark)]">
-        <InventoryProvider>
-          <ProductProvider> {/* added */}
-            <LayoutWrapper>{children}</LayoutWrapper>
-          </ProductProvider>
-        </InventoryProvider>
+      <body className="bg-gray-100">
+        {/* Providers will handle fetching from backend */}
+        <ProductProvider>
+          <InventoryProvider>
+            <LayoutWrapper>
+              {children}
+            </LayoutWrapper>
+          </InventoryProvider>
+        </ProductProvider>
       </body>
     </html>
   );

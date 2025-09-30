@@ -1,143 +1,93 @@
 'use client'
 
 import { createContext, useContext, useState, useEffect } from 'react'
+import axios from 'axios'
 
 const ProductContext = createContext()
+
+export const useProducts = () => useContext(ProductContext)
 
 export const ProductProvider = ({ children }) => {
   const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
-  // ✅ Function to check stock status
-  const getStockStatus = (stock) => {
-    if (stock === 0) return "Out of Stock"
-    if (stock < 5) return "Low Stock"
-    return "In Stock"
-  }
-
-  // Fetch products from API
+  // Fetch products from backend
   const fetchProducts = async () => {
+    setLoading(true)
     try {
-      setLoading(true)
-      const { getApiService, createFallbackApiService } = await import('../../lib/apiHelper.js')
-      
-      try {
-        const apiService = await getApiService()
-        const data = await apiService.getProducts()
-        setProducts(data)
-        setError(null)
-      } catch (apiError) {
-        console.warn('API service not available, using fallback:', apiError)
-        const fallbackService = createFallbackApiService()
-        const data = await fallbackService.getProducts()
-        setProducts(data)
-        setError('Backend server is not running. Using offline mode.')
-      }
+      const res = await axios.get('/api/products') // Replace with your API endpoint
+      setProducts(res.data)
+      setError(null)
     } catch (err) {
       console.error('Error fetching products:', err)
-      setError('Failed to load products.')
-      setProducts([])
+      setError('Failed to load products')
     } finally {
       setLoading(false)
     }
   }
 
-  // Load products on mount
   useEffect(() => {
     fetchProducts()
   }, [])
 
-  const addProduct = async (product) => {
+  // Add a new product
+  const addProduct = async (productData) => {
     try {
-      const { getApiService, createFallbackApiService } = await import('../../lib/apiHelper.js')
-      
-      try {
-        const apiService = await getApiService()
-        const newProduct = await apiService.createProduct(product)
-        setProducts(prev => [...prev, { ...newProduct, status: getStockStatus(newProduct.stock) }])
-        return newProduct
-      } catch (apiError) {
-        console.warn('API service not available, using fallback:', apiError)
-        const fallbackService = createFallbackApiService()
-        const newProduct = await fallbackService.createProduct(product)
-        setProducts(prev => [...prev, { ...newProduct, status: getStockStatus(newProduct.stock) }])
-        return newProduct
-      }
+      const res = await axios.post('/api/products', productData)
+      setProducts(prev => [res.data, ...prev])
+      setError(null)
     } catch (err) {
       console.error('Error adding product:', err)
-      throw err
+      setError('Failed to add product')
     }
   }
 
-  const updateProduct = async (id, updatedProduct) => {
+  // Update an existing product
+  const updateProduct = async (productId, updatedData) => {
     try {
-      const { getApiService, createFallbackApiService } = await import('../../lib/apiHelper.js')
-      
-      try {
-        const apiService = await getApiService()
-        const updated = await apiService.updateProduct(id, updatedProduct)
-        setProducts(prev => 
-          prev.map(p => 
-            p.id === id 
-              ? { ...updated, status: getStockStatus(updated.stock) }
-              : p
-          )
-        )
-        return updated
-      } catch (apiError) {
-        console.warn('API service not available, using fallback:', apiError)
-        const fallbackService = createFallbackApiService()
-        const updated = await fallbackService.updateProduct(id, updatedProduct)
-        setProducts(prev => 
-          prev.map(p => 
-            p.id === id 
-              ? { ...updated, status: getStockStatus(updated.stock) }
-              : p
-          )
-        )
-        return updated
-      }
+      const res = await axios.put(`/api/products/${productId}`, updatedData)
+      setProducts(prev => prev.map(p => p.id === productId ? res.data : p))
+      setError(null)
     } catch (err) {
       console.error('Error updating product:', err)
-      throw err
+      setError('Failed to update product')
     }
   }
 
-  const deleteProduct = async (id) => {
+  // Soft delete / archive a product
+  const deleteProduct = async (productId) => {
     try {
-      const { getApiService, createFallbackApiService } = await import('../../lib/apiHelper.js')
-      
-      try {
-        const apiService = await getApiService()
-        await apiService.deleteProduct(id)
-        setProducts(prev => prev.filter(p => p.id !== id))
-      } catch (apiError) {
-        console.warn('API service not available, using fallback:', apiError)
-        const fallbackService = createFallbackApiService()
-        await fallbackService.deleteProduct(id)
-        setProducts(prev => prev.filter(p => p.id !== id))
-      }
+      const res = await axios.patch(`/api/products/${productId}`, { status: 'archived' })
+      setProducts(prev => prev.map(p => p.id === productId ? res.data : p))
+      setError(null)
     } catch (err) {
       console.error('Error deleting product:', err)
-      throw err
+      setError('Failed to delete product')
     }
+  }
+
+  // Stock status helper
+  const getStockStatus = (stock) => {
+    if (stock > 10) return 'In Stock'
+    if (stock > 0) return 'Low Stock'
+    return 'Out of Stock'
+  }
+
+  const value = { 
+    products, 
+    loading, 
+    error, 
+    fetchProducts, 
+    addProduct, 
+    updateProduct, 
+    deleteProduct, 
+    getStockStatus 
   }
 
   return (
-    <ProductContext.Provider value={{ 
-      products, 
-      loading, 
-      error, 
-      addProduct, 
-      updateProduct, 
-      deleteProduct, 
-      getStockStatus,
-      refreshProducts: fetchProducts 
-    }}>
+    <ProductContext.Provider value={value}>
       {children}
     </ProductContext.Provider>
   )
 }
-
-export const useProducts = () => useContext(ProductContext)

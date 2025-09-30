@@ -1,25 +1,72 @@
-// src/components/LayoutWrapper.js
-"use client";
+'use client'
 
-import { usePathname } from "next/navigation";
-import Sidebar from "@/components/Sidebar";
-import Header from "@/components/Header";
+import { useState, useEffect } from 'react'
+import { usePathname, useRouter } from 'next/navigation'
+import axios from 'axios'
+import Header from './Header' // ensure correct path
+
+const noLayoutRoutes = ['/login', '/register', '/reset-password']
 
 export default function LayoutWrapper({ children }) {
-  const pathname = usePathname();
-  const hideLayout = pathname === "/login" || pathname === "/register" || pathname === "/reset-password";
+  const pathname = usePathname()
+  const router = useRouter()
+  const [user, setUser] = useState(null)
+  const [loading, setLoading] = useState(true)
 
-  if (hideLayout) return <>{children}</>;
+  useEffect(() => {
+    // Skip auth check for no-layout routes
+    if (noLayoutRoutes.includes(pathname)) {
+      setLoading(false)
+      return
+    }
 
-  return (
-    <div className="flex">
-      <Sidebar />
-      <div className="flex flex-col flex-1 min-h-screen">
-        <Header />
-        <main className="flex-1 overflow-x-hidden overflow-y-auto pt-16 md:pt-0">
-          <div className="p-4 md:p-6">{children}</div>
-        </main>
+    const token = localStorage.getItem('authToken')
+    if (!token) {
+      router.push('/login')
+      return
+    }
+
+    const fetchUser = async () => {
+      try {
+        const res = await axios.get('/api/auth/me', {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        setUser(res.data)
+      } catch (err) {
+        console.error(err)
+        localStorage.removeItem('authToken')
+        router.push('/login')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchUser()
+  }, [pathname, router])
+
+  // Show loading indicator while checking auth
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <p className="text-gray-500 text-lg">Loading...</p>
       </div>
-    </div>
-  );
+    )
+  }
+
+  // For routes without layout, just render children
+  if (noLayoutRoutes.includes(pathname)) {
+    return <>{children}</>
+  }
+
+  // For all other routes, render Header + main content
+  return (
+    <>
+      {/* Pass user to Header so it can display real info */}
+      <Header user={user} />
+
+      <main className="pt-20 p-6 bg-gray-100 min-h-screen">
+        {children}
+      </main>
+    </>
+  )
 }

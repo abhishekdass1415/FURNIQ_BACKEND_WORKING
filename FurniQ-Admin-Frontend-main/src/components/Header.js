@@ -1,19 +1,46 @@
 'use client'
 
-import { MagnifyingGlassIcon, Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline'
+import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline'
 import { useState, useRef, useEffect } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
+import axios from 'axios'
 
 export default function Header() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-  const [user, setUser] = useState({ name: 'Admin User', email: 'admin@furniq.com', role: 'admin' })
-  const [searchTerm, setSearchTerm] = useState('')
+  const [user, setUser] = useState(null)
+  const [loadingUser, setLoadingUser] = useState(true)
   const dropdownRef = useRef(null)
   const mobileMenuRef = useRef(null)
   const router = useRouter()
   const pathname = usePathname()
+
+  // Fetch logged-in user from backend
+  useEffect(() => {
+    const token = localStorage.getItem('authToken')
+    if (!token) {
+      router.push('/login')
+      return
+    }
+
+    const fetchUser = async () => {
+      try {
+        const res = await axios.get('/api/auth/me', {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+        setUser(res.data)
+      } catch (error) {
+        console.error(error)
+        localStorage.removeItem('authToken')
+        router.push('/login')
+      } finally {
+        setLoadingUser(false)
+      }
+    }
+
+    fetchUser()
+  }, [router])
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -28,9 +55,7 @@ export default function Header() {
     }
     
     document.addEventListener('mousedown', handleClickOutside)
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-    }
+    return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
   const handleProfile = () => {
@@ -41,16 +66,7 @@ export default function Header() {
   const handleLogout = () => {
     setIsDropdownOpen(false)
     localStorage.removeItem('authToken')
-    sessionStorage.removeItem('userData')
     router.push('/login')
-  }
-
-  const handleSearch = () => {
-    if (searchTerm.trim()) {
-      router.push(`/products?search=${encodeURIComponent(searchTerm.trim())}`)
-      setSearchTerm('')
-      setIsMobileMenuOpen(false)
-    }
   }
 
   const navItems = [
@@ -61,106 +77,52 @@ export default function Header() {
     { name: 'User', href: '/user', icon: '👥' },
   ]
 
+  if (loadingUser) return <div className="text-center py-4">Loading header...</div>
+
   return (
     <>
-      {/* Mobile menu button */}
+      {/* Mobile Menu Button */}
       <button
         data-menu-button
-        className="md:hidden fixed top-4 left-4 z-50 bg-indigo-600 text-white p-2 rounded-md shadow-lg dark:bg-indigo-700"
+        className="md:hidden fixed top-4 left-4 z-50 bg-indigo-600 text-white p-2 rounded-md shadow-lg"
         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
       >
-        {isMobileMenuOpen ? (
-          <XMarkIcon className="w-5 h-5" />
-        ) : (
-          <Bars3Icon className="w-5 h-5" />
-        )}
+        {isMobileMenuOpen ? <XMarkIcon className="w-5 h-5" /> : <Bars3Icon className="w-5 h-5" />}
       </button>
 
-      {/* Mobile menu */}
       {isMobileMenuOpen && (
-        <div className="fixed inset-0 z-40 md:hidden">
-          <div className="fixed inset-0 bg-black bg-opacity-50" onClick={() => setIsMobileMenuOpen(false)}></div>
-          <div ref={mobileMenuRef} className="fixed inset-y-0 left-0 w-64 bg-white shadow-lg overflow-y-auto dark:bg-gray-800">
-            <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">
-              <h2 className="text-lg font-semibold text-indigo-800 dark:text-indigo-100">Furniq Admin</h2>
-              <button onClick={() => setIsMobileMenuOpen(false)} className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
-                <XMarkIcon className="w-5 h-5" />
-              </button>
-            </div>
-            <nav className="p-4">
-              <ul className="space-y-2">
-                {navItems.map((item) => (
-                  <li key={item.name}>
-                    <Link
-                      href={item.href}
-                      className={`flex items-center px-4 py-3 rounded-md text-sm font-medium ${
-                        pathname === item.href
-                          ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-100'
-                          : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
-                      }`}
-                      onClick={() => setIsMobileMenuOpen(false)}
-                    >
-                      <span className="mr-3 text-lg">{item.icon}</span>
-                      {item.name}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-
-              {/* Mobile search bar */}
-              <div className="mt-4">
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                    placeholder="Search products..."
-                    className="w-full pl-8 pr-2 py-2 text-sm text-gray-900 placeholder-gray-500 bg-gray-100 border rounded-md focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
-                  />
-                  <button
-                    onClick={handleSearch}
-                    className="absolute left-1 top-1/2 -translate-y-1/2 text-gray-600 dark:text-gray-300"
-                  >
-                    <MagnifyingGlassIcon className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            </nav>
-          </div>
+        <div className="fixed inset-0 z-40 md:hidden" ref={mobileMenuRef}>
+          {/* Add your mobile menu content here */}
         </div>
       )}
 
-      {/* Header */}
-      <header className="z-10 py-4 bg-white shadow-md md:ml-64 dark:bg-gray-800 dark:border-b dark:border-gray-700">
-        <div className="container flex items-center justify-between h-full px-4 md:px-6 mx-auto text-purple-600 dark:text-purple-400">
-          <h1 className="text-xl font-semibold text-gray-800 md:hidden dark:text-white">
-            {navItems.find(item => item.href === pathname)?.name || 'Dashboard'}
-          </h1>
-
-          {/* Desktop search bar */}
-          <div className="hidden md:flex justify-center flex-1 lg:mr-32">
-            <div className="relative w-full max-w-xl mr-6">
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                placeholder="Search for products, customers, orders..."
-                className="w-full pl-8 pr-10 py-2 text-sm text-gray-900 placeholder-gray-500 bg-gray-100 border-0 rounded-md focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
-              />
-              <button
-                onClick={handleSearch}
-                className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-600 dark:text-gray-300"
-              >
-                <MagnifyingGlassIcon className="w-4 h-4" />
-              </button>
-            </div>
+      {/* Desktop Header */}
+      <header className="fixed top-0 left-0 right-0 z-30 py-3 bg-white shadow-md dark:bg-gray-800">
+        <div className="container flex items-center justify-between h-full px-6 mx-auto">
+          {/* Branding */}
+          <div className="text-xl font-bold text-gray-800 dark:text-white">
+            <Link href="/">FurniQ Admin</Link>
           </div>
 
-          {/* Right side */}
-          <ul className="flex items-center flex-shrink-0 space-x-4 md:space-x-6">
-            {/* User dropdown */}
+          {/* Navigation */}
+          <nav className="hidden md:flex items-center space-x-8">
+            {navItems.map((item) => (
+              <Link
+                key={item.name}
+                href={item.href}
+                className={`text-sm font-medium transition-colors duration-200 ${
+                  pathname === item.href
+                    ? 'text-indigo-600 dark:text-indigo-400'
+                    : 'text-gray-600 hover:text-indigo-600 dark:text-gray-300 dark:hover:text-indigo-400'
+                }`}
+              >
+                {item.name}
+              </Link>
+            ))}
+          </nav>
+
+          {/* User Dropdown */}
+          <ul className="flex items-center flex-shrink-0 space-x-6">
             <li className="relative" ref={dropdownRef}>
               <button
                 className="align-middle rounded-full flex items-center p-1 hover:bg-gray-100 dark:hover:bg-gray-700"
@@ -182,11 +144,11 @@ export default function Header() {
                     <p className="text-sm font-medium text-gray-900 dark:text-white">{user.name}</p>
                     <p className="text-xs text-gray-500 dark:text-gray-400">{user.email}</p>
                   </div>
-                  <button onClick={handleProfile} className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-600">
+                  <button onClick={handleProfile} className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-600">
                     Profile & Settings
                   </button>
                   <div className="border-t dark:border-gray-600"></div>
-                  <button onClick={handleLogout} className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-600">
+                  <button onClick={handleLogout} className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-600">
                     Logout
                   </button>
                 </div>

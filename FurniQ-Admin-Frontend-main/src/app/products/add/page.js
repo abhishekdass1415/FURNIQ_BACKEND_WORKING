@@ -2,35 +2,33 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { useProducts } from '@/context/ProductContext' // added
+import { useProducts } from '@/context/ProductContext'
 import Link from 'next/link'
 
-
-// Categories will be fetched from backend API
 export default function AddProduct() {
   const router = useRouter()
-  const { addProduct } = useProducts() // added
-  const [newProduct, setNewProduct] = useState({
-    name: '', sku: '', category: '', subcategory: '', price: '', stock: '', lowStock: '', brand: '', color: '', material: '', warranty: '', imageUrl: '', description: ''
-  })
-  const [categories, setCategories] = useState([])
-  const [allCategories, setAllCategories] = useState([]) // Store all categories including subcategories
+  const { products, setProducts } = useProducts()
 
-  // Fetch categories from backend API
+  const [newProduct, setNewProduct] = useState({
+    name: '', sku: '', category: '', subcategory: '', price: '', stock: '', lowStock: '',
+    brand: '', color: '', material: '', warranty: '', imageUrl: '', description: ''
+  })
+
+  const [categories, setCategories] = useState([])
+  const [allCategories, setAllCategories] = useState([])
+
+  // ✅ Fetch categories from backend
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/categories`)
-        if (response.ok) {
-          const data = await response.json()
+        const res = await fetch('/api/categories')   // relative path (works in dev & prod)
+        if (res.ok) {
+          const data = await res.json()
           setAllCategories(data)
-          
-          // Filter main categories (those without parentId) for the main dropdown
-          const mainCategories = data.filter(category => !category.parentId)
-          setCategories(mainCategories)
+          setCategories(data.filter(c => !c.parentId))
         }
-      } catch (error) {
-        console.error('Error fetching categories:', error)
+      } catch (err) {
+        console.error('Error fetching categories:', err)
       }
     }
     fetchCategories()
@@ -38,24 +36,38 @@ export default function AddProduct() {
 
   const getSubcategories = () => {
     if (!newProduct.category) return []
-    // Find the selected category by name and get its subcategories
     const selectedCategory = categories.find(c => c.name === newProduct.category)
     if (!selectedCategory) return []
-    
-    // Find all subcategories that have this category as parent
     return allCategories.filter(cat => cat.parentId === selectedCategory.id)
   }
 
-  const handleAddProduct = (e) => {
+  // ✅ Submit product to backend + update context
+  const handleAddProduct = async (e) => {
     e.preventDefault()
-    addProduct(newProduct) // added: saves product to context
-    router.push('/products')
+    try {
+      const res = await fetch('/api/products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newProduct),
+      })
+
+      if (!res.ok) throw new Error('Failed to add product')
+
+      const savedProduct = await res.json()
+
+      // Update frontend context
+      setProducts([...products, savedProduct])
+
+      router.push('/products')
+    } catch (err) {
+      console.error('Error adding product:', err)
+      alert('Failed to add product. Please try again.')
+    }
   }
 
   const handleChange = (e) => {
     const { name, value } = e.target
     if (name === 'category') {
-      // Reset subcategory when category changes
       setNewProduct({ ...newProduct, [name]: value, subcategory: '' })
     } else {
       setNewProduct({ ...newProduct, [name]: value })
@@ -73,16 +85,20 @@ export default function AddProduct() {
         <form onSubmit={handleAddProduct} className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white p-6 rounded shadow">
           <input name="name" value={newProduct.name} onChange={handleChange} required placeholder="Product Name *" className="border px-3 py-2 rounded" />
           <input name="sku" value={newProduct.sku} onChange={handleChange} required placeholder="SKU *" className="border px-3 py-2 rounded" />
+
+          {/* ✅ Category dropdown */}
           <select name="category" value={newProduct.category} onChange={handleChange} required className="border px-3 py-2 rounded">
             <option value="">Select Category</option>
             {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
           </select>
+
+          {/* ✅ Subcategory dropdown */}
           <select name="subcategory" value={newProduct.subcategory} onChange={handleChange} required disabled={!newProduct.category} className="border px-3 py-2 rounded">
             <option value="">Select Subcategory</option>
             {getSubcategories().map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
           </select>
 
-          {/* ✅ Updated Price input with Indian Rupees formatting */}
+          {/* ✅ Price with INR formatting */}
           <input
             type="text"
             name="price"
@@ -111,6 +127,7 @@ export default function AddProduct() {
           <input name="warranty" value={newProduct.warranty} onChange={handleChange} placeholder="Warranty" className="border px-3 py-2 rounded" />
           <input name="imageUrl" value={newProduct.imageUrl} onChange={handleChange} placeholder="Image URL" className="border px-3 py-2 rounded" />
           <textarea name="description" value={newProduct.description} onChange={handleChange} placeholder="Description" rows={3} className="md:col-span-2 border px-3 py-2 rounded"></textarea>
+
           <div className="md:col-span-2 flex justify-end gap-3">
             <Link href="/products" className="btn-secondary">Cancel</Link>
             <button type="submit" className="btn-primary">Add</button>
