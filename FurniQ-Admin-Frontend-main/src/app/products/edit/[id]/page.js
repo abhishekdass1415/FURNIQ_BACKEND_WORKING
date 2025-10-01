@@ -11,7 +11,7 @@ export default function EditProduct() {
   const router = useRouter()
   const params = useParams()
   const { products, updateProduct } = useProducts() // use context
-  const productId = parseInt(params.id)
+  const productId = params.id
   const [product, setProduct] = useState(null)
   const [categories, setCategories] = useState([])
   const [allCategories, setAllCategories] = useState([]) // Store all categories including subcategories
@@ -109,6 +109,9 @@ export default function EditProduct() {
             }}
             className="border px-3 py-2 rounded"
           />
+
+          <input type="number" min={0} max={100} name="discount" value={product.discount || 0}
+            onChange={handleChange} className="border px-3 py-2 rounded" />
 
           <input type="number" name="stock" value={product.stock} onChange={handleChange} className="border px-3 py-2 rounded" />
           <input type="number" name="lowStock" value={product.lowStock} onChange={handleChange} className="border px-3 py-2 rounded" />

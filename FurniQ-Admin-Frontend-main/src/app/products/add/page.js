@@ -11,7 +11,7 @@ export default function AddProduct() {
   const router = useRouter()
   const { addProduct } = useProducts() // added
   const [newProduct, setNewProduct] = useState({
-    name: '', sku: '', category: '', subcategory: '', price: '', stock: '', lowStock: '', brand: '', color: '', material: '', warranty: '', imageUrl: '', description: ''
+    name: '', sku: '', category: '', subcategory: '', price: '', discount: 0, stock: '', lowStock: '', brand: '', color: '', material: '', warranty: '', imageUrl: '', description: ''
   })
   const [categories, setCategories] = useState([])
   const [allCategories, setAllCategories] = useState([]) // Store all categories including subcategories
@@ -102,6 +102,9 @@ export default function AddProduct() {
             required
             className="border px-3 py-2 rounded"
           />
+
+          <input type="number" min={0} max={100} name="discount" value={newProduct.discount}
+            onChange={handleChange} placeholder="Discount %" className="border px-3 py-2 rounded" />
 
           <input type="number" name="stock" value={newProduct.stock} onChange={handleChange} placeholder="Stock *" required className="border px-3 py-2 rounded" />
           <input type="number" name="lowStock" value={newProduct.lowStock} onChange={handleChange} placeholder="Low Stock Alert" className="border px-3 py-2 rounded" />

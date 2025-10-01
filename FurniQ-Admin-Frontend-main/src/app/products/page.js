@@ -18,7 +18,7 @@ export default function Products() {
     const fetchCategories = async () => {
       try {
         const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL;
-        const response = await fetch(`${API_BASE}/categories`);
+        const response = await fetch(`${API_BASE}/api/categories`);
         if (response.ok) {
           const data = await response.json()
           setAllCategories(data)
@@ -137,7 +137,7 @@ export default function Products() {
               <tbody>
                 {filteredProducts.map(p => (
                   <tr key={p.id}>
-                    <td className="px-6 py-4">{p.imageUrl && <image src={p.imageUrl} alt={p.name} className="w-12 h-12 rounded" />}</td>
+                    <td className="px-6 py-4">{p.imageUrl && <img src={p.imageUrl} alt={p.name} className="w-12 h-12 rounded" />}</td>
                     <td className="px-6 py-4">{p.name}</td>
                     <td className="px-6 py-4">{p.sku}</td>
                     <td className="px-6 py-4">{p.category}</td>
