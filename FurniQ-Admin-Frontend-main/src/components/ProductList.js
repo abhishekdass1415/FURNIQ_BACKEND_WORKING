@@ -1,50 +1,80 @@
-export default function ProductList() {
-  const products = [
-    { id: 1, name: 'Leather Sofa', category: 'Living Room', price: '$1,299', stock: 15, status: 'Active' },
-    { id: 2, name: 'Dining Table', category: 'Dining Room', price: '$899', stock: 8, status: 'Active' },
-    { id: 3, name: 'King Size Bed', category: 'Bedroom', price: '$1,599', stock: 5, status: 'Low Stock' },
-    { id: 4, name: 'Bookshelf', category: 'Office', price: '$299', stock: 22, status: 'Active' },
-  ]
+'use client'
+
+import Link from 'next/link';
+
+/**
+ * A reusable component to display a list of products in a table.
+ * It receives all data and functions as props.
+ */
+export default function ProductList({ products, viewMode, handleRestore }) {
+
+  // Helper function to get a readable stock status
+  const getStockStatus = (stock, lowStockThreshold = 10) => {
+    if (stock > lowStockThreshold) return { text: 'In Stock', className: 'bg-green-100 text-green-800' };
+    if (stock > 0) return { text: 'Low Stock', className: 'bg-yellow-100 text-yellow-800' };
+    return { text: 'Out of Stock', className: 'bg-red-100 text-red-800' };
+  };
+
+  // Helper function to format price
+  const formatPrice = (price) => {
+    if (!price) return "N/A";
+    const numeric = parseInt(price.toString().replace(/[^0-9]/g, '')) || 0;
+    return new Intl.NumberFormat("en-IN", {
+      style: "currency", currency: "INR", maximumFractionDigits: 0
+    }).format(numeric);
+  };
 
   return (
-    <div className="bg-white shadow rounded-lg">
-      <div className="px-4 py-5 sm:p-6">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead>
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+    <div className="overflow-x-auto">
+      <table className="min-w-full divide-y divide-gray-200">
+        <thead className="bg-gray-50">
+          <tr>
+            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
+            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SKU</th>
+            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
+            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th>
+            <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+          </tr>
+        </thead>
+        <tbody className="bg-white divide-y divide-gray-200">
+          {products.map(p => {
+            const stockStatus = getStockStatus(p.stock, p.lowStock);
+            return (
+              <tr key={p.id} className="hover:bg-gray-50">
+                {/* Product */}
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="flex items-center gap-4">
+                    <img
+                      className="h-12 w-12 rounded-md object-cover"
+                      src={p.imageUrl || 'https://via.placeholder.com/48'}
+                      alt={p.name}
+                    />
+                    <span className="font-medium text-gray-900">{p.name}</span>
+                  </div>
+                </td>
+                {/* SKU */}
+                <td className="px-6 py-4 whitespace-nowrap font-mono text-sm text-gray-500">{p.sku}</td>
+                {/* Price */}
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatPrice(p.price)}</td>
+                {/* Stock */}
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${stockStatus.className}`}>
+                    {p.stock} units ({stockStatus.text})
+                  </span>
+                </td>
+                {/* Actions */}
+                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                  {viewMode === 'active' ? (
+                    <Link href={`/products/${p.id}`} className="btn-secondary-sm">View</Link>
+                  ) : (
+                    <button onClick={() => handleRestore(p.id)} className="btn-primary-sm">Restore</button>
+                  )}
+                </td>
               </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {products.map((product) => (
-                <tr key={product.id}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{product.name}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{product.category}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{product.price}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{product.stock}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                      product.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                    }`}>
-                      {product.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <button className="text-indigo-600 hover:text-indigo-900 mr-3">Edit</button>
-                    <button className="text-red-600 hover:text-red-900">Delete</button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+            )
+          })}
+        </tbody>
+      </table>
     </div>
-  )
+  );
 }

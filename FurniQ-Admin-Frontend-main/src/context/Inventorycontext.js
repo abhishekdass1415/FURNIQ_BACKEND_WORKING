@@ -1,77 +1,93 @@
-'use client'
+'use client';
 
-import { createContext, useContext, useState, useEffect } from 'react'
-import axios from 'axios'
+import { createContext, useContext, useState, useEffect } from 'react';
 
-const InventoryContext = createContext()
+// The base URL for your API is read from environment variables.
+// This makes the code portable between development and production.
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
-export const useInventory = () => useContext(InventoryContext)
+const InventoryContext = createContext();
+
+export const useInventory = () => useContext(InventoryContext);
 
 export const InventoryProvider = ({ children }) => {
-  const [logs, setLogs] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
+  const [logs, setLogs] = useState([]);
 
-  // Fetch inventory logs from backend
-  const fetchLogs = async () => {
-    setLoading(true)
-    try {
-      const res = await axios.get('/api/inventory') // replace with your backend endpoint
-      setLogs(res.data)
-      setError(null)
-    } catch (err) {
-      console.error('Error fetching inventory logs:', err)
-      setError('Failed to load inventory logs')
-    } finally {
-      setLoading(false)
-    }
-  }
-
+  // 1. Fetch all logs from the API when the component first loads.
   useEffect(() => {
-    fetchLogs()
-  }, [])
+    const fetchLogs = async () => {
+      if (!API_BASE_URL) {
+        console.error("API URL is not defined. Please check your .env.local file.");
+        return;
+      }
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/inventory-logs`);
+        if (!response.ok) throw new Error('Failed to fetch logs');
+        const data = await response.json();
+        // Sort logs by creation date, with the newest ones first.
+        setLogs(data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
+      } catch (error) {
+        console.error("Error fetching inventory logs:", error);
+      }
+    };
+    fetchLogs();
+  }, []);
 
-  // Add a new log
+  // 2. Create a new log by sending data to the API.
   const addLog = async (logData) => {
     try {
-      const res = await axios.post('/api/inventory', logData)
-      setLogs(prevLogs => [res.data, ...prevLogs])
-      setError(null)
-    } catch (err) {
-      console.error('Error adding inventory log:', err)
-      setError('Failed to add inventory log')
+      const response = await fetch(`${API_BASE_URL}/api/inventory-logs`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(logData),
+      });
+      if (!response.ok) throw new Error('Failed to create log');
+      const newLog = await response.json();
+      // Add the new log from the server to the top of our local state.
+      setLogs(prevLogs => [newLog, ...prevLogs]);
+    } catch (error) {
+      console.error("Error creating inventory log:", error);
     }
-  }
+  };
 
-  // Update a log
+  // 3. Update an existing log via the API.
   const updateLog = async (logId, updatedData) => {
     try {
-      const res = await axios.put(`/api/inventory/${logId}`, updatedData)
-      setLogs(prevLogs => prevLogs.map(log => log.id === logId ? res.data : log))
-      setError(null)
-    } catch (err) {
-      console.error('Error updating inventory log:', err)
-      setError('Failed to update inventory log')
+      const response = await fetch(`${API_BASE_URL}/api/inventory-logs/${logId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedData),
+      });
+      if (!response.ok) throw new Error('Failed to update log');
+      const updatedLog = await response.json();
+      // Replace the old log with the updated one in our local state.
+      setLogs(logs.map(log =>
+        log.id === logId ? updatedLog : log
+      ));
+    } catch (error) {
+      console.error("Error updating inventory log:", error);
     }
-  }
+  };
 
-  // Delete a log
+  // 4. Delete a log via the API.
   const deleteLog = async (logId) => {
     try {
-      await axios.delete(`/api/inventory/${logId}`)
-      setLogs(prevLogs => prevLogs.filter(log => log.id !== logId))
-      setError(null)
-    } catch (err) {
-      console.error('Error deleting inventory log:', err)
-      setError('Failed to delete inventory log')
+      const response = await fetch(`${API_BASE_URL}/api/inventory-logs/${logId}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) throw new Error('Failed to delete log');
+      // Remove the deleted log from our local state.
+      setLogs(logs.filter(log => log.id !== logId));
+    } catch (error) {
+      console.error("Error deleting inventory log:", error);
     }
-  }
+  };
 
-  const value = { logs, loading, error, fetchLogs, addLog, updateLog, deleteLog }
+  const value = { logs, addLog, updateLog, deleteLog };
 
   return (
     <InventoryContext.Provider value={value}>
       {children}
     </InventoryContext.Provider>
-  )
-}
+  );
+};

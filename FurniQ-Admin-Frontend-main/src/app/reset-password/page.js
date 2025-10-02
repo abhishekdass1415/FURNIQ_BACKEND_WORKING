@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useAuth } from '@/context/AuthContext'; // Import the useAuth hook
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline'
 
 export default function ResetPassword() {
@@ -14,44 +15,43 @@ export default function ResetPassword() {
   const [isLoading, setIsLoading] = useState(false)
 
   const router = useRouter()
+  const { resetPassword } = useAuth(); // Get the function from context
 
-  const handleReset = (e) => {
+  const handleReset = async (e) => {
     e.preventDefault()
     setError('')
     setSuccess('')
 
     if (!newPassword || !confirmPassword) {
-      setError('All fields are required')
-      return
+      setError('All fields are required');
+      return;
     }
 
     if (newPassword !== confirmPassword) {
-      setError('Passwords do not match')
-      return
+      setError('Passwords do not match');
+      return;
     }
 
-    setIsLoading(true)
+    setIsLoading(true);
 
-    try {
-      // Save new password in localStorage (mock backend)
-      localStorage.setItem('userPassword', newPassword)
+    // Call the placeholder function from the AuthContext
+    const result = await resetPassword(newPassword);
 
-      setSuccess('Password reset successful! You can now log in with your new password.')
+    setIsLoading(false);
 
+    if (result.success) {
+      setSuccess(result.message + ' Redirecting to login...');
       setTimeout(() => {
-        router.push('/login') // redirect to login after success
-      }, 1500)
-    } catch (err) {
-      setError('Something went wrong, please try again.')
-    } finally {
-      setIsLoading(false)
+        router.push('/login'); // redirect to login after success
+      }, 1500);
+    } else {
+      setError(result.message || 'Something went wrong, please try again.');
     }
   }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">
       <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-md w-full max-w-md mx-4">
-        {/* Back button */}
         <button
           onClick={() => router.push('/login')}
           className="mb-4 text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300 text-sm"

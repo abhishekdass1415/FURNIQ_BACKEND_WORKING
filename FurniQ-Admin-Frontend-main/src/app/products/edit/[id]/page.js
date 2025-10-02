@@ -3,80 +3,43 @@
 import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { useProducts } from '@/context/ProductContext'
+import { useCategories } from '@/context/CategoryContext' // Import category context
 import Link from 'next/link'
 import { ArrowLeftIcon } from '@heroicons/react/24/outline'
 
-const categories = [
-  { id: 1, name: 'Furniture', subcategories: [{ id: 101, name: 'Sofas' }, { id: 102, name: 'Tables' }, { id: 103, name: 'Bed' }] },
-  { id: 2, name: 'Kitchen & Dining', subcategories: [{ id: 201, name: 'Dining Sets' }, { id: 202, name: 'Cookware' }] },
-  { id: 3, name: 'Home Decor', subcategories: [{ id: 301, name: 'Lighting' }, { id: 302, name: 'Wall Art' }] },
-  { id: 4, name: 'Home Furnishing', subcategories: [{ id: 401, name: 'Cushions' }, { id: 402, name: 'Carpets' }] },
-]
-
-const labelClasses = "block text-sm font-medium text-gray-700"
-const inputClasses = "block w-full mt-1 border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm px-4 py-3"
+const labelClasses = "block text-sm font-medium text-gray-700";
+const inputClasses = "block w-full mt-1 border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm px-4 py-3";
 
 export default function EditProduct() {
-  const router = useRouter()
-  const params = useParams()
-  const { products, setProducts } = useProducts()
-  const productId = parseInt(params.id)
-  const [product, setProduct] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const router = useRouter();
+  const params = useParams();
+  const { products, updateProduct } = useProducts();
+  const { categories } = useCategories(); // Get dynamic categories
+  const productId = parseInt(params.id);
+  const [product, setProduct] = useState(null);
 
-  // Fetch product from backend API
   useEffect(() => {
-    const fetchProduct = async () => {
-      try {
-        const res = await fetch(`/api/products/${productId}`)
-        if (!res.ok) throw new Error('Failed to fetch product')
-        const data = await res.json()
-        setProduct(data)
-        setLoading(false)
-      } catch (err) {
-        console.error(err)
-        setLoading(false)
-      }
-    }
-    fetchProduct()
-  }, [productId])
+    const productData = products.find(p => p.id === productId);
+    if (productData) setProduct({ ...productData });
+  }, [productId, products]);
 
-  if (loading) return <div className="p-6 text-center">Loading...</div>
-  if (!product) return <div className="p-6 text-center">Product not found</div>
+  if (!product) return <div className="p-6 text-center">Loading...</div>;
 
-  const handleChange = (e) => setProduct({ ...product, [e.target.name]: e.target.value })
+  const handleChange = (e) => setProduct({ ...product, [e.target.name]: e.target.value });
 
   const handlePriceChange = (e, fieldName = 'price') => {
-    const rawValue = e.target.value.replace(/[^0-9]/g, '')
-    const formattedValue = rawValue
-      ? new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(rawValue)
-      : ''
-    setProduct({ ...product, [fieldName]: formattedValue })
-  }
+    const rawValue = e.target.value.replace(/[^0-9]/g, '');
+    const formattedValue = rawValue ? new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(rawValue) : "";
+    setProduct({ ...product, [fieldName]: formattedValue });
+  };
 
-  const handleUpdate = async (e) => {
-    e.preventDefault()
-    try {
-      const res = await fetch(`/api/products/${productId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(product),
-      })
-      if (!res.ok) throw new Error('Failed to update product')
-      const updatedProduct = await res.json()
+  const handleUpdate = (e) => {
+    e.preventDefault();
+    updateProduct(productId, product);
+    router.push(`/products/${productId}`);
+  };
 
-      // Update context
-      const updatedProducts = products.map(p => (p.id === productId ? updatedProduct : p))
-      setProducts(updatedProducts)
-
-      router.push(`/products/${productId}`)
-    } catch (err) {
-      console.error(err)
-      alert('Failed to update product. Please try again.')
-    }
-  }
-
-  const getSubcategories = () => categories.find(c => c.name === product.category)?.subcategories || []
+  const getSubcategories = () => categories.find(c => c.name === product.category)?.subcategories || [];
 
   return (
     <div className="max-w-7xl mx-auto">
@@ -90,6 +53,7 @@ export default function EditProduct() {
       <div className="bg-white p-6 rounded-lg shadow-md">
         <form onSubmit={handleUpdate} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+
             <div className="md:col-span-1">
               <label htmlFor="name" className={labelClasses}>Product Name *</label>
               <input id="name" name="name" value={product.name || ''} onChange={handleChange} required className={inputClasses} />
@@ -128,7 +92,7 @@ export default function EditProduct() {
 
             <div className="md:col-span-2">
               <label htmlFor="availabilityOffer" className={labelClasses}>Availability Offer</label>
-              <input id="availabilityOffer" name="availabilityOffer" value={product.availabilityOffer || ''} placeholder="e.g., Free Shipping" onChange={handleChange} className={inputClasses} />
+              <input id="availabilityOffer" name="availabilityOffer" value={product.availabilityOffer || ''} placeholder="e.g., Free Shipping, Next Day Delivery" onChange={handleChange} className={inputClasses} />
             </div>
 
             <div className="md:col-span-1">
@@ -181,7 +145,6 @@ export default function EditProduct() {
               <textarea id="description" name="description" value={product.description || ''} onChange={handleChange} rows={6} className={inputClasses}></textarea>
             </div>
           </div>
-
           <div className="pt-4 flex justify-end gap-3 border-t">
             <Link href={`/products/${productId}`} className="btn-secondary">Cancel</Link>
             <button type="submit" className="btn-primary">Save Changes</button>
@@ -189,5 +152,5 @@ export default function EditProduct() {
         </form>
       </div>
     </div>
-  )
+  );
 }

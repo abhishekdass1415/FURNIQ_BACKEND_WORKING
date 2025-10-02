@@ -2,89 +2,48 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { useProducts } from '@/context/ProductContext';
+import { useCategories } from '@/context/CategoryContext'; // Import category context
 import Link from 'next/link';
 import { PencilIcon, TrashIcon, ArrowLeftIcon, XMarkIcon } from '@heroicons/react/24/outline';
 
-// You can also fetch categories dynamically, but keeping static for now
-const allCategories = [
-  { id: 1, name: 'Furniture', subcategories: [{ id: 101, name: 'Sofas' }, { id: 102, name: 'Tables' }, { id: 103, name: 'Bed' }] },
-  { id: 2, name: 'Kitchen & Dining', subcategories: [{ id: 201, name: 'Dining Sets' }, { id: 202, name: 'Cookware' }] },
-  { id: 3, name: 'Home Decor', subcategories: [{ id: 301, name: 'Lighting' }, { id: 302, name: 'Wall Art' }] },
-  { id: 4, name: 'Home Furnishing', subcategories: [{ id: 401, name: 'Cushions' }, { id: 402, name: 'Carpets' }] },
-];
 
 export default function ProductDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const productId = params.id;
+  const { products, updateProduct, deleteProduct } = useProducts();
+  const { categories } = useCategories(); // Get dynamic categories
+  const productId = parseInt(params.id);
+  const product = products.find(p => p.id === productId);
 
-  const [product, setProduct] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [newCategory, setNewCategory] = useState({ cat: '', subcat: '' });
 
-  // ✅ Fetch product from API
   useEffect(() => {
-    const fetchProduct = async () => {
-      try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/products/${productId}`);
-        if (!res.ok) throw new Error('Failed to fetch product');
-        const data = await res.json();
-        setProduct(data);
-        setNewCategory({ cat: data.category, subcat: data.subcategory });
-      } catch (error) {
-        console.error(error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    if (productId) fetchProduct();
-  }, [productId]);
-
-  // ✅ Update product category/subcategory
-  const handleCategorySave = async () => {
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/products/${productId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ category: newCategory.cat, subcategory: newCategory.subcat }),
-      });
-      if (!res.ok) throw new Error("Failed to update category");
-      const updated = await res.json();
-      setProduct(updated);
-      setIsCategoryModalOpen(false);
-    } catch (error) {
-      console.error(error);
-      alert("Error updating category");
+    if (product) {
+      setNewCategory({ cat: product.category, subcat: product.subcategory });
     }
+  }, [product]);
+
+  const handleCategorySave = () => {
+    updateProduct(productId, { category: newCategory.cat, subcategory: newCategory.subcat });
+    setIsCategoryModalOpen(false);
   };
 
-  // ✅ Delete product
-  const handleDelete = async () => {
-    if (!window.confirm("Are you sure you want to archive this product?")) return;
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/products/${productId}`, {
-        method: "DELETE",
-      });
-      if (!res.ok) throw new Error("Failed to delete product");
-      router.push("/products");
-    } catch (error) {
-      console.error(error);
-      alert("Error deleting product");
+  const handleDelete = () => {
+    if (window.confirm("Are you sure you want to archive this product?")) {
+      deleteProduct(productId);
+      router.push('/products');
     }
-  };
+  }
 
   const formatPrice = (price) => {
     if (!price) return "N/A";
     const numeric = parseInt(price.toString().replace(/\D/g, '')) || 0;
     return new Intl.NumberFormat("en-IN", {
-      style: "currency",
-      currency: "INR",
-      maximumFractionDigits: 0
+      style: "currency", currency: "INR", maximumFractionDigits: 0
     }).format(numeric);
   };
-
-  if (loading) return <div className="text-center py-10">Loading product...</div>;
 
   if (!product || product.status === 'archived') {
     return (
@@ -100,7 +59,6 @@ export default function ProductDetailPage() {
 
   const isAvailable = product.stock > 0;
 
-  // ✅ Category Change Modal
   const CategoryChangeModal = () => (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4">
       <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
@@ -116,8 +74,7 @@ export default function ProductDetailPage() {
               onChange={(e) => setNewCategory({ cat: e.target.value, subcat: '' })}
               className="input-style"
             >
-              <option value="">Select category</option>
-              {allCategories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+              {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
             </select>
           </div>
           <div>
@@ -129,9 +86,7 @@ export default function ProductDetailPage() {
               disabled={!newCategory.cat}
             >
               <option value="">Select subcategory</option>
-              {allCategories.find(c => c.name === newCategory.cat)?.subcategories.map(s => (
-                <option key={s.id} value={s.name}>{s.name}</option>
-              ))}
+              {categories.find(c => c.name === newCategory.cat)?.subcategories.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
             </select>
           </div>
         </div>

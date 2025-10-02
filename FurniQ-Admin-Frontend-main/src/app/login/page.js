@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useAuth } from '@/context/AuthContext' // Import the useAuth hook
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline'
 
 export default function Login() {
@@ -10,42 +11,23 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const [showPassword, setShowPassword] = useState(false)
-  const router = useRouter()
+
+  const { login } = useAuth(); // Get the login function from context
 
   const handleLogin = async (e) => {
-    e.preventDefault()
-    setIsLoading(true)
-    setError('')
+    e.preventDefault();
+    setIsLoading(true);
+    setError('');
 
-    try {
-      // **IMPORTANT**: Replace '/api/auth/login' with your actual login API endpoint
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
+    // Call the login function from the AuthContext
+    const result = await login(email, password);
 
-      if (!response.ok) {
-        // If the server responds with an error (e.g., 401 Unauthorized)
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Incorrect email or password');
-      }
+    setIsLoading(false);
 
-      // If login is successful, the backend should return the user and a token
-      const { user, token } = await response.json();
-
-      // Save the token and user data to localStorage
-      localStorage.setItem('authToken', token);
-      localStorage.setItem('userData', JSON.stringify(user));
-      
-      // Redirect to the main dashboard on successful login
-      router.push('/');
-
-    } catch (err) {
-      // Display any error message from the try block
-      setError(err.message);
-      setIsLoading(false); // Stop loading on error
+    if (!result.success) {
+      setError(result.message || 'Incorrect email or password');
     }
+    // On success, the context will handle the redirect automatically
   }
 
   return (
@@ -65,9 +47,7 @@ export default function Login() {
 
         <form onSubmit={handleLogin}>
           <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Email
-            </label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
             <input
               type="email"
               value={email}
@@ -80,9 +60,7 @@ export default function Login() {
           </div>
 
           <div className="mb-2 relative">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Password
-            </label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Password</label>
             <input
               type={showPassword ? 'text' : 'password'}
               value={password}

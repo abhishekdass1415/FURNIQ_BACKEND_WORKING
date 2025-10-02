@@ -1,74 +1,50 @@
 'use client'
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useProducts } from '@/context/ProductContext';
+import { useCategories } from '@/context/CategoryContext';
 import Link from 'next/link';
+import ProductList from '@/components/ProductList'; // We import the table component
 
-const categories = [
-  { id: 1, name: 'Furniture', subcategories: [{ id: 101, name: 'Sofas' }, { id: 102, name: 'Tables' }, { id: 103, name: 'Bed' }] },
-  { id: 2, name: 'Kitchen & Dining', subcategories: [{ id: 201, name: 'Dining Sets' }, { id: 202, name: 'Cookware' }] },
-  { id: 3, name: 'Home Decor', subcategories: [{ id: 301, name: 'Lighting' }, { id: 302, name: 'Wall Art' }] },
-  { id: 4, name: 'Home Furnishing', subcategories: [{ id: 401, name: 'Cushions' }, { id: 402, name: 'Carpets' }] },
-];
+// A simple loading spinner to show while data is being fetched
+function LoadingSpinner() {
+  return (
+    <div className="flex justify-center items-center h-64">
+      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+    </div>
+  );
+}
 
 export default function ProductsPage() {
-  const { products, setProducts } = useProducts(); // context state
+  const { products, loading: productsLoading, updateProduct } = useProducts();
+  const { categories, loading: categoriesLoading } = useCategories();
   const [viewMode, setViewMode] = useState('active');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedSubcategory, setSelectedSubcategory] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
 
+  // Determine which subcategories to show based on the selected category
   const filteredSubcategories = selectedCategory
     ? categories.find(cat => cat.name === selectedCategory)?.subcategories || []
     : [];
 
+  // Filter products based on the "Active" or "Archived" tab
   const listSource = products.filter(p => p.status === viewMode);
 
+  // Further filter products based on the selected category/subcategory dropdowns
   const filteredProducts = listSource.filter(product => {
+    // These category/subcategory names come from your Product model in Prisma
     if (selectedCategory && product.category !== selectedCategory) return false;
     if (selectedSubcategory && product.subcategory !== selectedSubcategory) return false;
     return true;
   });
 
-  // Fetch products from backend
-  useEffect(() => {
-    async function fetchProducts() {
-      setLoading(true);
-      try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/products`);
-        if (!res.ok) throw new Error('Failed to fetch products');
-        const data = await res.json();
-        setProducts(data);
-      } catch (err) {
-        console.error(err);
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchProducts();
-  }, [setProducts]);
-
-  // Restore archived product
-  const handleRestore = async (productId) => {
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/products/${productId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'active' }),
-      });
-      if (!res.ok) throw new Error('Failed to restore product');
-      const updatedProduct = await res.json();
-      setProducts(products.map(p => (p.id === productId ? updatedProduct : p)));
-    } catch (err) {
-      console.error(err);
-      setError(err.message);
-    }
+  // Function to restore an archived product
+  const handleRestore = (productId) => {
+    updateProduct(productId, { status: 'active' });
   };
 
-  if (loading) return <p>Loading products...</p>;
-  if (error) return <p className="text-red-500">{error}</p>;
+  // Show the spinner if either products or categories are still loading
+  const isLoading = productsLoading || categoriesLoading;
 
   return (
     <div className="w-full">
@@ -77,12 +53,12 @@ export default function ProductsPage() {
         <Link href="/products/add" className="btn-primary">Add New Product</Link>
       </div>
 
-      {/* Filters */}
+      {/* Filters Section */}
       <div className="bg-white rounded-lg shadow p-4 mb-6">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-medium text-gray-800">Filter Products</h3>
           <button
-            onClick={() => { setSelectedCategory(''); setSelectedSubcategory(''); }}
+            onClick={() => { setSelectedCategory(''); setSelectedSubcategory('') }}
             className="text-sm text-indigo-600 hover:underline"
           >
             Clear Filters
@@ -94,7 +70,7 @@ export default function ProductsPage() {
             <select
               id="category-select"
               value={selectedCategory}
-              onChange={(e) => { setSelectedCategory(e.target.value); setSelectedSubcategory(''); }}
+              onChange={(e) => { setSelectedCategory(e.target.value); setSelectedSubcategory('') }}
               className="block w-full mt-1 border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
             >
               <option value="">All Categories</option>
@@ -117,7 +93,7 @@ export default function ProductsPage() {
         </div>
       </div>
 
-      {/* Tabs */}
+      {/* Tabs for Active/Archived */}
       <div className="mb-4 flex border-b">
         <button
           onClick={() => setViewMode('active')}
@@ -133,48 +109,24 @@ export default function ProductsPage() {
         </button>
       </div>
 
-      {/* Table */}
+      {/* Product List Table */}
       <div className="bg-white shadow-md rounded-lg overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SKU</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredProducts.length > 0 ? filteredProducts.map(p => (
-                <tr key={p.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center gap-4">
-                      <img
-                        className="h-12 w-12 rounded-md object-cover"
-                        src={p.imageUrl || 'https://via.placeholder.com/48'}
-                        alt={p.name}
-                      />
-                      <span className="font-medium text-gray-900">{p.name}</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap font-mono text-sm text-gray-500">{p.sku}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    {viewMode === 'active' ? (
-                      <Link href={`/products/${p.id}`} className="btn-secondary-sm">View</Link>
-                    ) : (
-                      <button onClick={() => handleRestore(p.id)} className="btn-primary-sm">Restore</button>
-                    )}
-                  </td>
-                </tr>
-              )) : (
-                <tr>
-                  <td colSpan="3" className="text-center py-8 text-gray-500">No {viewMode} products found.</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+        {isLoading ? <LoadingSpinner /> : (
+          // We use the separate ProductList component here for a cleaner structure
+          <ProductList
+            products={filteredProducts}
+            viewMode={viewMode}
+            handleRestore={handleRestore}
+          />
+        )}
+
+        {/* Show this message if there are no products after loading is complete */}
+        {!isLoading && filteredProducts.length === 0 && (
+          <p className="text-center py-8 text-gray-500">
+            No {viewMode} products found matching the criteria.
+          </p>
+        )}
       </div>
     </div>
-  );
+  )
 }

@@ -1,93 +1,99 @@
 'use client'
 
-import { createContext, useContext, useState, useEffect } from 'react'
-import axios from 'axios'
+import { createContext, useContext, useState, useEffect } from 'react';
 
-const ProductContext = createContext()
+const ProductContext = createContext();
 
-export const useProducts = () => useContext(ProductContext)
+export const useProducts = () => useContext(ProductContext);
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 export const ProductProvider = ({ children }) => {
-  const [products, setProducts] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // Fetch products from backend
-  const fetchProducts = async () => {
-    setLoading(true)
-    try {
-      const res = await axios.get('/api/products') // Replace with your API endpoint
-      setProducts(res.data)
-      setError(null)
-    } catch (err) {
-      console.error('Error fetching products:', err)
-      setError('Failed to load products')
-    } finally {
-      setLoading(false)
-    }
-  }
-
+  // This useEffect runs once when the application loads to fetch all products from the API.
   useEffect(() => {
-    fetchProducts()
-  }, [])
+    const fetchProducts = async () => {
+      if (!API_BASE_URL) {
+        console.error("API URL is not defined. Please check your .env.local file.");
+        setLoading(false);
+        return;
+      }
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/products`);
+        if (!response.ok) throw new Error("Failed to fetch products");
+        const data = await response.json();
+        setProducts(data);
+      } catch (error) {
+        console.error("Error fetching products:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProducts();
+  }, []);
 
-  // Add a new product
+  /**
+   * Corresponds to: createProduct API
+   * Adds a new product to the database and updates the local state to reflect the change.
+   */
   const addProduct = async (productData) => {
     try {
-      const res = await axios.post('/api/products', productData)
-      setProducts(prev => [res.data, ...prev])
-      setError(null)
-    } catch (err) {
-      console.error('Error adding product:', err)
-      setError('Failed to add product')
+      const response = await fetch(`${API_BASE_URL}/api/products`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(productData),
+      });
+      if (!response.ok) throw new Error("Failed to create product");
+      const newProduct = await response.json();
+      setProducts(prev => [...prev, newProduct]); // Add the new product to the list
+    } catch (error) { // <-- ERROR WAS HERE
+      console.error("Error adding product:", error);
     }
-  }
+  };
 
-  // Update an existing product
+  /**
+   * Corresponds to: updateProduct API
+   * Updates a product in the database and refreshes the local state.
+   */
   const updateProduct = async (productId, updatedData) => {
     try {
-      const res = await axios.put(`/api/products/${productId}`, updatedData)
-      setProducts(prev => prev.map(p => p.id === productId ? res.data : p))
-      setError(null)
-    } catch (err) {
-      console.error('Error updating product:', err)
-      setError('Failed to update product')
+      const response = await fetch(`${API_BASE_URL}/api/products/${productId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedData),
+      });
+      if (!response.ok) throw new Error("Failed to update product");
+      const updatedProductFromServer = await response.json();
+      // Update the product in the local list
+      setProducts(prev => prev.map(p => (p.id === productId ? { ...p, ...updatedProductFromServer } : p)));
+    } catch (error) {
+      console.error(`Error updating product ${productId}:`, error);
     }
-  }
+  };
 
-  // Soft delete / archive a product
+  /**
+   * This function "archives" a product by updating its status.
+   * This is safer than a hard delete and corresponds to your "delete" logic.
+   */
   const deleteProduct = async (productId) => {
-    try {
-      const res = await axios.patch(`/api/products/${productId}`, { status: 'archived' })
-      setProducts(prev => prev.map(p => p.id === productId ? res.data : p))
-      setError(null)
-    } catch (err) {
-      console.error('Error deleting product:', err)
-      setError('Failed to delete product')
-    }
-  }
+    // We call the main updateProduct function to change the status, which archives the product.
+    await updateProduct(productId, { status: 'archived' });
+  };
 
-  // Stock status helper
-  const getStockStatus = (stock) => {
-    if (stock > 10) return 'In Stock'
-    if (stock > 0) return 'Low Stock'
-    return 'Out of Stock'
-  }
-
-  const value = { 
-    products, 
-    loading, 
-    error, 
-    fetchProducts, 
-    addProduct, 
-    updateProduct, 
-    deleteProduct, 
-    getStockStatus 
-  }
+  // The value object provides all necessary data and functions to the rest of the app.
+  const value = {
+    products,
+    loading,
+    addProduct,
+    updateProduct,
+    deleteProduct
+  };
 
   return (
     <ProductContext.Provider value={value}>
       {children}
     </ProductContext.Provider>
-  )
-}
+  );
+};

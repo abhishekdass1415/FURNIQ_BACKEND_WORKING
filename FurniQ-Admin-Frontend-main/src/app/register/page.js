@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useAuth } from '@/context/AuthContext' // Import the useAuth hook
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline'
 
 export default function Register() {
@@ -16,62 +17,43 @@ export default function Register() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
   const router = useRouter()
+  const { register } = useAuth(); // Get the register function from context
 
-  const handleRegister = (e) => {
+  const handleRegister = async (e) => {
     e.preventDefault()
     setError('')
     setSuccess('')
 
     if (!name || !email || !password || !confirmPassword) {
-      setError('All fields are required')
-      return
+      setError('All fields are required');
+      return;
     }
 
     if (password !== confirmPassword) {
-      setError('Passwords do not match')
-      return
+      setError('Passwords do not match');
+      return;
     }
 
-    setIsLoading(true)
+    setIsLoading(true);
 
-    try {
-      // Check if user already exists
-      const existingUser = localStorage.getItem('userData')
-      if (existingUser) {
-        const parsedUser = JSON.parse(existingUser)
-        if (parsedUser.email === email) {
-          setError('Email already registered. Please login.')
-          setIsLoading(false)
-          return
-        }
-      }
+    // Call the register function from the AuthContext
+    const result = await register(name, email, password);
 
-      // Save user to localStorage (mock backend)
-      const newUser = {
-        id: 'USR-' + new Date().getTime(),
-        name,
-        email,
-        password, // store password (in real app, hash this!)
-        role: 'admin' // default role
-      }
-      localStorage.setItem('userData', JSON.stringify(newUser))
+    setIsLoading(false);
 
-      setSuccess('Registration successful! Redirecting to login...')
+    if (result.success) {
+      setSuccess(result.message + ' Redirecting to login...');
       setTimeout(() => {
-        router.push('/login')
-      }, 1500)
-    } catch (err) {
-      console.error(err)
-      setError('Registration failed. Please try again.')
-    } finally {
-      setIsLoading(false)
+        router.push('/login');
+      }, 1500);
+    } else {
+      setError(result.message);
     }
   }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">
       <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-md w-full max-w-md mx-4">
-        {/* Back button */}
         <button
           onClick={() => router.push('/login')}
           className="mb-4 text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300 text-sm"
@@ -95,12 +77,10 @@ export default function Register() {
             {success}
           </div>
         )}
-         
+
         <form onSubmit={handleRegister}>
           <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Full Name
-            </label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Full Name</label>
             <input
               type="text"
               value={name}
@@ -113,9 +93,7 @@ export default function Register() {
           </div>
 
           <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Email
-            </label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
             <input
               type="email"
               value={email}
@@ -128,9 +106,7 @@ export default function Register() {
           </div>
 
           <div className="mb-4 relative">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Password
-            </label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Password</label>
             <input
               type={showPassword ? 'text' : 'password'}
               value={password}
@@ -150,9 +126,7 @@ export default function Register() {
           </div>
 
           <div className="mb-6 relative">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Confirm Password
-            </label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Confirm Password</label>
             <input
               type={showConfirmPassword ? 'text' : 'password'}
               value={confirmPassword}
@@ -179,12 +153,12 @@ export default function Register() {
             {isLoading ? 'Registering...' : 'Register'}
           </button>
         </form>
-        
+
         <div className="mt-6 text-center">
           <p className="text-sm text-gray-600 dark:text-gray-400">
             Already have an account?{' '}
-            <a 
-              href="/login" 
+            <a
+              href="/login"
               className="font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300"
             >
               Sign in here
