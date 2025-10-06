@@ -34,7 +34,9 @@ export default function Login() {
 
       // Login success
       localStorage.setItem('userData', JSON.stringify(storedUser))
-      router.push('/') // redirect to dashboard
+      localStorage.setItem('authToken', 'local-demo-token')
+      localStorage.setItem('lastActivity', Date.now().toString())
+      router.push('/products') // redirect to products first
     } catch (err) {
       console.error('Login error:', err)
       setError('Login failed. Please try again.')

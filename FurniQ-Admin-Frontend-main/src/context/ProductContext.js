@@ -111,11 +111,19 @@ export const ProductProvider = ({ children }) => {
       try {
         const apiService = await getApiService()
         await apiService.deleteProduct(id)
+        if (typeof window !== 'undefined') {
+          const deleted = JSON.parse(localStorage.getItem('deletedProducts') || '[]')
+          localStorage.setItem('deletedProducts', JSON.stringify([...deleted, id]))
+        }
         setProducts(prev => prev.filter(p => p.id !== id))
       } catch (apiError) {
         console.warn('API service not available, using fallback:', apiError)
         const fallbackService = createFallbackApiService()
         await fallbackService.deleteProduct(id)
+        if (typeof window !== 'undefined') {
+          const deleted = JSON.parse(localStorage.getItem('deletedProducts') || '[]')
+          localStorage.setItem('deletedProducts', JSON.stringify([...deleted, id]))
+        }
         setProducts(prev => prev.filter(p => p.id !== id))
       }
     } catch (err) {

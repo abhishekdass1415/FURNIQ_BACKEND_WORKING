@@ -57,6 +57,7 @@ export const createProduct = async (req, res) => {
 			description: req.body.description,
 			sku: req.body.sku,
 			price: parseFloat(req.body.price) || 0,
+			discount: req.body.discount !== undefined ? parseFloat(req.body.discount) : 0,
 			stock: parseInt(req.body.stock) || 0,
 			lowStock: parseInt(req.body.lowStock) || 5,
 			imageUrl: req.body.imageUrl,
@@ -64,6 +65,8 @@ export const createProduct = async (req, res) => {
 			color: req.body.color,
 			material: req.body.material,
 			warranty: req.body.warranty,
+			isDeleted: false,
+			deletedAt: null,
 			categoryId: categoryId
 		};
 		
@@ -81,7 +84,9 @@ export const createProduct = async (req, res) => {
 
 export const updateProduct = async (req, res) => {
 	try {
-		const updatedProduct = await prisma.product.update({ where: { id: req.params.id }, data: req.body });
+		const data = { ...req.body };
+		if (data.discount !== undefined) data.discount = parseFloat(data.discount);
+		const updatedProduct = await prisma.product.update({ where: { id: req.params.id }, data });
 		res.json(updatedProduct);
 	} catch (err) {
 		res.status(500).json({ error: "Something went wrong" });
@@ -90,8 +95,8 @@ export const updateProduct = async (req, res) => {
 
 export const deleteProduct = async (req, res) => {
 	try {
-		await prisma.product.delete({ where: { id: req.params.id } });
-		res.json({ message: "Product deleted" });
+		const updated = await prisma.product.update({ where: { id: req.params.id }, data: { isDeleted: true, deletedAt: new Date() } });
+		res.json({ message: "Product soft-deleted", product: updated });
 	} catch (err) {
 		res.status(500).json({ error: "Something went wrong" });
 	}

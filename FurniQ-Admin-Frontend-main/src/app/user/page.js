@@ -10,11 +10,12 @@ export default function UserPage() {
   useEffect(() => {
     async function fetchUser() {
       try {
-        // Replace with your backend URL
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/user`)
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/users`)
         if (!res.ok) throw new Error('Failed to fetch user data')
         const data = await res.json()
-        setUser(data)
+        // API returns an array of users; pick the first admin/user
+        const firstUser = Array.isArray(data) ? (data[0] || null) : data
+        setUser(firstUser)
       } catch (err) {
         console.error('Error fetching user:', err)
         setError('Unable to fetch user data')

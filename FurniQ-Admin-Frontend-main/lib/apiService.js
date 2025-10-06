@@ -1,9 +1,17 @@
 // API Service for connecting to backend
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ? `${process.env.NEXT_PUBLIC_API_BASE_URL}/api` : 'http://localhost:5000/api';
+const DEFAULT_API_BASE_URL = "http://localhost:5000";
+
+function computeBaseApiUrl() {
+  const rawBase = process.env.NEXT_PUBLIC_API_BASE_URL || DEFAULT_API_BASE_URL;
+  // Ensure we end up with "<origin>/api"
+  if (rawBase.endsWith("/api")) return rawBase;
+  if (rawBase.endsWith("/")) return `${rawBase}api`;
+  return `${rawBase}/api`;
+}
 
 class ApiService {
   constructor() {
-    this.baseURL = API_BASE_URL;
+    this.baseURL = computeBaseApiUrl();
   }
 
   // Helper method to get auth token
@@ -192,7 +200,7 @@ class ApiService {
   // Health check
   async checkApiStatus() {
     try {
-      const response = await fetch(`${this.baseURL.replace('/api', '')}/api/status`);
+      const response = await fetch(`${this.baseURL}/status`);
       return response.ok;
     } catch (error) {
       return false;

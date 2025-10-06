@@ -2,9 +2,19 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { useProducts } from "@/context/ProductContext";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 export default function Dashboard() {
   const { products, loading, error, getStockStatus } = useProducts();
+  const router = useRouter();
+
+  useEffect(() => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
+    if (!token) {
+      router.replace('/login');
+    }
+  }, [router]);
 
   // ✅ helper for INR formatting
   const formatPrice = (price) => {
@@ -52,8 +62,8 @@ export default function Dashboard() {
                       {products.map((p) => (
                         <tr key={p.id}>
                           <td className="px-6 py-4">
-                            {p.imageUrl ? (
-                              <image
+                          {p.imageUrl ? (
+                              <img
                                 src={p.imageUrl}
                                 alt={p.name}
                                 className="w-12 h-12 rounded"
