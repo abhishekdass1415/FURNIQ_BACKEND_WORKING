@@ -3,22 +3,18 @@
 import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline'
 import { useState, useRef, useEffect } from 'react'
 
-// Note: `useRouter`, `usePathname`, and `Link` are removed as direct navigation
-// can be handled with standard `<a>` tags and window.location for simplicity
-// in a way that is guaranteed to work in all environments.
-
 export default function Header() {
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false)
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // User state now starts as null and is fetched from the API.
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const dropdownRef = useRef(null)
-  const mobileMenuRef = useRef(null)
+  const dropdownRef = useRef(null);
+  const mobileMenuRef = useRef(null);
 
-  // Use window.location to get the current path for active link styling.
+  // Use state to hold the current path for active link styling.
   const [pathname, setPathname] = useState('');
 
   // --- API and User Data Handling ---
@@ -58,6 +54,7 @@ export default function Header() {
       } catch (error) {
         console.error("Profile fetch error:", error);
         // If anything goes wrong, ensure the user is sent to the login page.
+        localStorage.removeItem('authToken');
         window.location.href = '/login';
       } finally {
         setLoading(false);
@@ -68,28 +65,28 @@ export default function Header() {
   }, []);
 
 
-  // --- Event Handlers ---
+  // --- Event Handlers for UI ---
   useEffect(() => {
     function handleClickOutside(event) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setIsDropdownOpen(false)
+        setIsDropdownOpen(false);
       }
       if (mobileMenuRef.current && !mobileMenuRef.current.contains(event.target) &&
         !event.target.closest('[data-menu-button]')) {
-        setIsMobileMenuOpen(false)
+        setIsMobileMenuOpen(false);
       }
     }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handleLogout = () => {
-    setIsDropdownOpen(false)
+    setIsDropdownOpen(false);
     // Clear the token that proves the user is logged in.
-    localStorage.removeItem('authToken')
+    localStorage.removeItem('authToken');
     // Redirect to the login page.
     window.location.href = '/login';
-  }
+  };
 
   const navItems = [
     { name: 'Dashboard', href: '/', icon: '📊' },
@@ -97,7 +94,7 @@ export default function Header() {
     { name: 'Categories', href: '/categories', icon: '📂' },
     { name: 'Inventory', href: '/inventory', icon: '📦' },
     { name: 'Users', href: '/users', icon: '👥' },
-  ]
+  ];
 
   // While fetching user data, show a minimal loading state to prevent errors.
   if (loading) {
@@ -111,9 +108,9 @@ export default function Header() {
     );
   }
 
-  // If the user data could not be fetched for any reason, this prevents the page from crashing.
+  // If the user data could not be fetched, this prevents the page from crashing.
   if (!user) {
-    return null; // The useEffect will handle redirection.
+    return null; // The useEffect hook will handle the redirection to the login page.
   }
 
   return (
@@ -183,7 +180,7 @@ export default function Header() {
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
               >
                 <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold text-sm">
-                  {user.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                  {user.name ? user.name.split(' ').map(n => n[0]).join('').toUpperCase() : 'U'}
                 </div>
                 <div className="ml-2 hidden md:block text-left">
                   <p className="text-sm font-medium text-gray-700 truncate max-w-[120px]">{user.name}</p>
@@ -193,16 +190,16 @@ export default function Header() {
               </button>
 
               {isDropdownOpen && (
-                <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-200">
+                <div className="absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-200">
                   <div className="px-4 py-2 border-b">
-                    <p className="text-sm font-medium text-gray-900">{user.name}</p>
-                    <p className="text-xs text-gray-500">{user.email}</p>
+                    <p className="text-sm font-medium text-gray-900 truncate">{user.name}</p>
+                    <p className="text-xs text-gray-500 truncate">{user.email}</p>
                   </div>
                   <a href="/profile" onClick={() => setIsDropdownOpen(false)} className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
                     Profile & Settings
                   </a>
                   <div className="border-t"></div>
-                  <button onClick={handleLogout} className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                  <button onClick={handleLogout} className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50">
                     Logout
                   </button>
                 </div>
@@ -214,3 +211,4 @@ export default function Header() {
     </>
   );
 }
+

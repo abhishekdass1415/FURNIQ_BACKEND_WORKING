@@ -1,85 +1,69 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { ArrowLeftIcon, EyeIcon, EyeSlashIcon, ArchiveBoxIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
+import { useState } from 'react';
+import { useAuth } from '@/context/AuthContext';
+import { useProducts } from '@/context/ProductContext';
+import { useCategories } from '@/context/CategoryContext';
+import { useUsers } from '@/context/UserContext';
+import { useInventory } from '@/context/Inventorycontext';
+import Link from 'next/link';
+import {
+  ArrowLeftIcon,
+  EyeIcon,
+  EyeSlashIcon,
+  ArchiveBoxIcon,
+  ExclamationTriangleIcon,
+  TagIcon,
+  UsersIcon
+} from '@heroicons/react/24/outline';
+
+// A loading skeleton component for a better initial load experience
+function DashboardSkeleton() {
+  return (
+    <div className="w-full animate-pulse">
+      <div className="h-9 w-64 bg-gray-200 rounded-md mb-6"></div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="bg-white p-6 rounded-lg shadow-md h-28"></div>
+        <div className="bg-white p-6 rounded-lg shadow-md h-28"></div>
+        <div className="bg-white p-6 rounded-lg shadow-md h-28"></div>
+        <div className="bg-white p-6 rounded-lg shadow-md h-28"></div>
+      </div>
+      <div className="bg-white shadow-md rounded-lg p-4">
+        <div className="h-6 w-48 bg-gray-200 rounded-md mb-4"></div>
+        <div className="space-y-4">
+          <div className="h-10 bg-gray-200 rounded-md"></div>
+          <div className="h-10 bg-gray-200 rounded-md"></div>
+          <div className="h-10 bg-gray-200 rounded-md"></div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function DashboardPage() {
-  // State for data fetched from the API
-  const [products, setProducts] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const { user } = useAuth();
+  const { products, updateProduct } = useProducts();
+  const { categories } = useCategories();
+  const { users } = useUsers();
+  const { logs } = useInventory();
 
-  // Local UI state
-  const [activeView, setActiveView] = useState('summary'); // 'summary', 'allProducts', 'lowStock'
-  const [publishedFilter, setPublishedFilter] = useState('live'); // 'live' or 'draft'
+  const [activeView, setActiveView] = useState('summary');
 
-  // Base URL for API calls, works on localhost and Vercel
-  const API_BASE_URL = typeof window !== 'undefined' ? window.location.origin : '';
-
-  // --- DATA FETCHING ---
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      // Fetch products and categories at the same time for efficiency
-      const [productsRes, categoriesRes] = await Promise.all([
-        fetch(new URL('/api/products', API_BASE_URL)),
-        fetch(new URL('/api/categories', API_BASE_URL))
-      ]);
-
-      if (!productsRes.ok || !categoriesRes.ok) {
-        throw new Error('Failed to fetch dashboard data. Please try again.');
-      }
-
-      const productsData = await productsRes.json();
-      const categoriesData = await categoriesRes.json();
-
-      setProducts(productsData);
-      setCategories(categoriesData);
-      setError(null);
-
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Fetch data when the component mounts
-  useEffect(() => {
-    fetchData();
-  }, [API_BASE_URL]);
-
-
-  // --- DATA MANIPULATION ---
-  const handleTogglePublishedStatus = async (productId, currentStatus) => {
-    const newStatus = currentStatus === 'live' ? 'draft' : 'live';
-    try {
-      const res = await fetch(new URL(`/api/products/${productId}`, API_BASE_URL), {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ publishedStatus: newStatus }),
-      });
-
-      if (!res.ok) throw new Error('Failed to update product status.');
-
-      // Refresh all data to ensure the dashboard is in sync
-      await fetchData();
-
-    } catch (err) {
-      alert(err.message); // Simple error feedback for the user
-    }
-  };
-
-  // --- DERIVED DATA (Calculations from fetched state) ---
-  const activeProducts = products.filter(p => !p.isDeleted);
+  // Derived data calculations
+  const activeProducts = products.filter(p => p.status === 'active');
   const lowStockProducts = activeProducts.filter(p => p.stock > 0 && p.stock <= (p.lowStockThreshold || 10));
   const liveProducts = activeProducts.filter(p => p.publishedStatus === 'live');
   const draftProducts = activeProducts.filter(p => p.publishedStatus === 'draft');
 
-  // --- RENDER LOGIC ---
-  if (loading) return <div className="text-center p-8">Loading Dashboard...</div>;
-  if (error) return <div className="text-center p-8 text-red-600">Error: {error}</div>;
+  const handleTogglePublishedStatus = (productId, currentStatus) => {
+    const newStatus = currentStatus === 'live' ? 'draft' : 'live';
+    updateProduct(productId, { publishedStatus: newStatus });
+  };
+
+  // Show skeleton while data is loading
+  if (!products.length && !categories.length) {
+    return <DashboardSkeleton />;
+  }
 
   // Reusable component for displaying lists of products
   const ProductListByCategory = ({ title, productList }) => (
@@ -92,7 +76,7 @@ export default function DashboardPage() {
       </div>
       <div className="space-y-6">
         {categories.map(category => {
-          const productsInCategory = productList.filter(p => p.categoryId === category.id);
+          const productsInCategory = productList.filter(p => p.category === category.name);
           if (productsInCategory.length === 0) return null;
 
           return (
@@ -108,7 +92,7 @@ export default function DashboardPage() {
                         <p className="text-sm text-gray-500 font-mono">SKU: {product.sku}</p>
                       </div>
                     </div>
-                    <a href={`/products/${product.id}`} className="btn-secondary-sm">View</a>
+                    <Link href={`/products/${product.id}`} className="btn-secondary-sm">View</Link>
                   </div>
                 ))}
               </div>
@@ -200,3 +184,4 @@ export default function DashboardPage() {
     </div>
   )
 }
+

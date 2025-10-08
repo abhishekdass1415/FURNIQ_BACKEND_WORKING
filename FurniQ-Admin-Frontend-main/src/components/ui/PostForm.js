@@ -1,27 +1,68 @@
 "use client";
 
 import { useState } from "react";
-import { uploadImageToSupabase } from "@/lib/uploadImage";
+import { createClient } from "@supabase/supabase-js";
 import { Card, CardHeader, CardTitle, CardContent } from "./Card"; // Using your own UI components
 import { PhotoIcon, CheckCircleIcon, ExclamationCircleIcon } from '@heroicons/react/24/outline';
 
+// --- Supabase Image Upload Logic ---
+// Initialize the Supabase client. Your URL and anon key should be in your .env.local file.
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
+// Check if Supabase credentials are provided
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.error("Supabase URL or Anon Key is missing. Please check your environment variables.");
+}
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+/**
+ * A helper function to upload an image to a Supabase bucket.
+ * @param {File} file - The image file to upload.
+ * @returns {string|null} The public URL of the uploaded image or null on failure.
+ */
+async function uploadImageToSupabase(file) {
+  if (!file) return null;
+
+  try {
+    const fileName = `${Date.now()}_${file.name}`;
+    const { data, error } = await supabase.storage
+      .from("images") // IMPORTANT: Make sure you have a bucket named "images" in Supabase.
+      .upload(fileName, file);
+
+    if (error) {
+      throw error;
+    }
+
+    // Get the public URL of the uploaded file
+    const { data: publicURLData } = supabase.storage
+      .from("images")
+      .getPublicUrl(fileName);
+      
+    return publicURLData.publicUrl;
+  } catch (error) {
+    console.error("Error uploading image to Supabase:", error.message);
+    return null;
+  }
+}
+
+// --- Main Form Component ---
 export default function PostForm() {
   // State for form inputs
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [file, setFile] = useState(null);
+  const [preview, setPreview] = useState(null);
 
   // State for UI feedback
-  const [preview, setPreview] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
-    setError("");
-    setSuccess("");
+    setError('');
+    setSuccess('');
 
     if (selectedFile) {
       if (!selectedFile.type.startsWith("image/")) {
@@ -37,19 +78,23 @@ export default function PostForm() {
     }
   };
 
-  // This single function now handles both image upload and post submission
+  /**
+   * This single function handles the entire submission process:
+   * 1. Validates the form.
+   * 2. Uploads the image to Supabase.
+   * 3. If successful, it submits the post data to your backend API.
+   */
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
-    setSuccess("");
+    setError('');
+    setSuccess('');
 
     if (!title.trim() || !content.trim()) {
       setError("Title and content are required.");
       return;
     }
-
     if (!file) {
-      setError("An image is required to create a post.");
+      setError("An image is required for the post.");
       return;
     }
 
@@ -71,7 +116,7 @@ export default function PostForm() {
           desc: content,
           img: imageUrl, // Use the URL returned from Supabase
           slug: title.toLowerCase().replace(/\s+/g, "-").replace(/[^\w-]+/g, ''),
-          catSlug: "style", // Example category
+          catSlug: "style", // Example category, can be made dynamic
         }),
       });
 
@@ -101,6 +146,7 @@ export default function PostForm() {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
+          
           {/* Image Upload Section */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Cover Image</label>
@@ -164,3 +210,4 @@ export default function PostForm() {
     </Card>
   );
 }
+

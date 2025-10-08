@@ -28,7 +28,7 @@ export default function LayoutWrapper({ children }) {
   return (
     <>
       <Header />
-
+      
       {/* This is the main content area for your application.
         The top padding (pt-20) ensures content is not hidden behind the fixed Header.
       */}
@@ -38,3 +38,4 @@ export default function LayoutWrapper({ children }) {
     </>
   );
 }
+

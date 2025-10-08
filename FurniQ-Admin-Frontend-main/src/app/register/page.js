@@ -20,6 +20,10 @@ export default function Register() {
     e.preventDefault()
     setError('')
     setSuccess('')
+    if (!name || !email || !password || !confirmPassword) {
+      setError('All fields are required');
+      return;
+    }
 
     if (password !== confirmPassword) {
       setError('Passwords do not match');
@@ -27,7 +31,6 @@ export default function Register() {
     }
 
     setIsLoading(true);
-
     try {
       const res = await fetch(new URL('/api/auth/register', API_BASE_URL), {
         method: 'POST',
@@ -43,7 +46,6 @@ export default function Register() {
 
       setSuccess('Registration successful! Redirecting to login...');
       setTimeout(() => {
-        // Replaced router.push with standard window.location.href for compatibility
         window.location.href = '/login';
       }, 2000);
 
@@ -54,17 +56,14 @@ export default function Register() {
     }
   }
 
-  const handleBackToLogin = () => {
-    // Replaced router.push with standard window.location.href for compatibility
-    window.location.href = '/login';
-  }
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">
       <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-md w-full max-w-md mx-4">
-        <button onClick={handleBackToLogin} className="mb-4 text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300 text-sm">
+        {/* CORRECTED: Replaced button with a simple <a> tag for navigation */}
+        <a href="/login" className="mb-4 text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300 text-sm">
           &larr; Back to Login
-        </button>
+        </a>
+
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-indigo-600 dark:text-indigo-400 mb-2">Furniq</h1>
           <h2 className="text-2xl font-semibold text-gray-800 dark:text-white mb-2">Create Account</h2>
@@ -125,6 +124,20 @@ export default function Register() {
             {isLoading ? 'Registering...' : 'Register'}
           </button>
         </form>
+
+        {/* CORRECTED: This section was moved inside the main component return */}
+        <div className="mt-6 text-center">
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            Already have an account?{' '}
+            <a
+              href="/login"
+              className="font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300"
+            >
+              Sign in here
+            </a>
+          </p>
+        </div>
+
       </div>
     </div>
   )

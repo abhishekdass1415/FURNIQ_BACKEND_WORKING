@@ -1,6 +1,8 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { useAuth } from '@/context/AuthContext'
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline'
 
 export default function Login() {
@@ -9,39 +11,22 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const [showPassword, setShowPassword] = useState(false)
-
-  const API_BASE_URL = typeof window !== 'undefined' ? window.location.origin : '';
+  const { login } = useAuth(); // Get the login function from context
 
   const handleLogin = async (e) => {
-    e.preventDefault()
-    setIsLoading(true)
-    setError('')
+    e.preventDefault();
+    setIsLoading(true);
+    setError('');
 
-    try {
-      const res = await fetch(new URL('/api/auth/login', API_BASE_URL), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
+    // Call the login function from the AuthContext
+    const result = await login(email, password);
 
-      const data = await res.json();
+    setIsLoading(false);
 
-      if (!res.ok) {
-        throw new Error(data.error || 'Login failed. Please try again.');
-      }
-
-      // Store the token and user data for session management
-      localStorage.setItem('authToken', data.token);
-      localStorage.setItem('userData', JSON.stringify(data.user));
-
-      // Redirect to the products dashboard on successful login
-      window.location.href = '/products';
-
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setIsLoading(false)
+    if (!result.success) {
+      setError(result.message || 'Incorrect email or password');
     }
+    // On success, the context will handle the redirect automatically
   }
 
   return (
@@ -110,4 +95,3 @@ export default function Login() {
     </div>
   )
 }
-

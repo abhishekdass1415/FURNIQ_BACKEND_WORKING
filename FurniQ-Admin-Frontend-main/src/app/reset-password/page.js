@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline'
 
 export default function ResetPassword() {
@@ -14,43 +15,38 @@ export default function ResetPassword() {
   const [success, setSuccess] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const API_BASE_URL = typeof window !== 'undefined' ? window.location.origin : '';
+  const router = useRouter()
 
-  const handleReset = async (e) => {
-    e.preventDefault();
-    setError('');
-    setSuccess('');
+  const handleReset = (e) => {
+    e.preventDefault()
+    setError('')
+    setSuccess('')
+
+    if (!newPassword || !confirmPassword) {
+      setError('All fields are required')
+      return
+    }
 
     if (newPassword !== confirmPassword) {
       setError('Passwords do not match');
       return;
     }
 
-    setIsLoading(true);
+    setIsLoading(true)
 
     try {
-      const res = await fetch(new URL('/api/auth/reset-password', API_BASE_URL), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, newPassword }),
-      });
+      // Save new password in localStorage (mock backend)
+      localStorage.setItem('userPassword', newPassword)
 
-      const data = await res.json();
+      setSuccess('Password reset successful! You can now log in with your new password.')
 
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to reset password.');
-      }
-
-      setSuccess(data.message + ' Redirecting to login...');
       setTimeout(() => {
-        // Replaced router.push with standard window.location for compatibility
-        window.location.href = '/login';
-      }, 2000);
-
+        router.push('/login') // redirect to login after success
+      }, 1500)
     } catch (err) {
-      setError(err.message);
+      setError('Something went wrong, please try again.')
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
   }
 
@@ -62,7 +58,11 @@ export default function ResetPassword() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">
       <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-md w-full max-w-md mx-4">
-        <button onClick={handleBackToLogin} className="mb-4 text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300 text-sm">
+        {/* Back button */}
+        <button
+          onClick={() => router.push('/login')}
+          className="mb-4 text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300 text-sm"
+        >
           &larr; Back to Login
         </button>
         <h2 className="text-2xl font-semibold text-gray-800 dark:text-white mb-6 text-center">Reset Password</h2>
@@ -109,4 +109,3 @@ export default function ResetPassword() {
     </div>
   )
 }
-

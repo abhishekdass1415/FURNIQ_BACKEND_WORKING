@@ -1,23 +1,20 @@
-import './globals.css';
-import LayoutWrapper from '@/components/LayoutWrapper';
+import "./globals.css";
+import LayoutWrapper from "@/components/LayoutWrapper";
+import { AuthProvider } from "@/context/AuthContext"; // 1. Import the AuthProvider
 
 export const metadata = {
-  title: 'Admin Dashboard',
-  description: 'Manage your products and inventory',
+  title: "Furniq Furniture Admin",
+  description: "Admin panel for Furniq Furniture",
 };
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body className="bg-gray-100">
-        {/*
-          The Providers have been removed because they are no longer needed.
-          Every page now fetches its own data from your API.
-          This is the final and correct setup for deploying to Vercel without errors.
-        */}
-        <LayoutWrapper>
-          {children}
-        </LayoutWrapper>
+      <body className="bg-gray-100 text-gray-900">
+        {/* 2. Wrap the entire application with the AuthProvider */}
+        <AuthProvider>
+          <LayoutWrapper>{children}</LayoutWrapper>
+        </AuthProvider>
       </body>
     </html>
   );
