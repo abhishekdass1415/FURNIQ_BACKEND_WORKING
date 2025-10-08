@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline'
 
 export default function Login() {
@@ -10,36 +9,36 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const [showPassword, setShowPassword] = useState(false)
-  const router = useRouter()
 
-  const handleLogin = (e) => {
+  const API_BASE_URL = typeof window !== 'undefined' ? window.location.origin : '';
+
+  const handleLogin = async (e) => {
     e.preventDefault()
     setIsLoading(true)
     setError('')
 
     try {
-      // Get stored user from localStorage
-      const storedUser = JSON.parse(localStorage.getItem('userData'))
-      if (!storedUser) {
-        setError('No registered user found. Please register first.')
-        setIsLoading(false)
-        return
+      const res = await fetch(new URL('/api/auth/login', API_BASE_URL), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Login failed. Please try again.');
       }
 
-      if (email !== storedUser.email || password !== storedUser.password) {
-        setError('Incorrect email or password')
-        setIsLoading(false)
-        return
-      }
+      // Store the token and user data for session management
+      localStorage.setItem('authToken', data.token);
+      localStorage.setItem('userData', JSON.stringify(data.user));
 
-      // Login success
-      localStorage.setItem('userData', JSON.stringify(storedUser))
-      localStorage.setItem('authToken', 'local-demo-token')
-      localStorage.setItem('lastActivity', Date.now().toString())
-      router.push('/products') // redirect to products first
+      // Redirect to the products dashboard on successful login
+      window.location.href = '/products';
+
     } catch (err) {
-      console.error('Login error:', err)
-      setError('Login failed. Please try again.')
+      setError(err.message);
     } finally {
       setIsLoading(false)
     }
@@ -62,9 +61,7 @@ export default function Login() {
 
         <form onSubmit={handleLogin}>
           <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Email
-            </label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
             <input
               type="email"
               value={email}
@@ -77,9 +74,7 @@ export default function Login() {
           </div>
 
           <div className="mb-2 relative">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Password
-            </label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Password</label>
             <input
               type={showPassword ? 'text' : 'password'}
               value={password}
@@ -89,29 +84,18 @@ export default function Login() {
               required
               disabled={isLoading}
             />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-9 text-gray-500"
-            >
+            <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-9 text-gray-500">
               {showPassword ? <EyeSlashIcon className="w-5 h-5" /> : <EyeIcon className="w-5 h-5" />}
             </button>
           </div>
 
           <div className="text-right mb-6">
-            <a
-              href="/reset-password"
-              className="text-sm text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300"
-            >
+            <a href="/reset-password" className="text-sm text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300">
               Forgot password?
             </a>
           </div>
 
-          <button
-            type="submit"
-            className="w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
-            disabled={isLoading}
-          >
+          <button type="submit" className="w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed" disabled={isLoading}>
             {isLoading ? 'Signing in...' : 'Sign In'}
           </button>
         </form>
@@ -119,15 +103,11 @@ export default function Login() {
         <div className="mt-6 text-center">
           <p className="text-sm text-gray-600 dark:text-gray-400">
             Don&apos;t have an account?
-            <a
-              href="/register"
-              className="font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300"
-            >
-              Register here
-            </a>
+            <a href="/register" className="font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300"> Register here</a>
           </p>
         </div>
       </div>
     </div>
   )
 }
+
