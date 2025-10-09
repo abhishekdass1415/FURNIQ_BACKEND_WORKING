@@ -1,387 +1,235 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import React, { useState } from 'react';
+import { useProducts } from '@/context/ProductContext';
+import { useCategories } from '@/context/CategoryContext';
+import Link from 'next/link';
+import { PlusIcon, PencilIcon, TrashIcon, CheckIcon, XMarkIcon } from '@heroicons/react/24/outline';
+
+// A simple loading spinner component to show while fetching data
+function LoadingSpinner() {
+  return (
+    <div className="flex justify-center items-center h-64">
+      <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-indigo-500"></div>
+    </div>
+  );
+}
 
 export default function CategoryManagement() {
-  const [categories, setCategories] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [showAddCategory, setShowAddCategory] = useState(false)
-  const [showAddSubcategory, setShowAddSubcategory] = useState(false)
-  const [selectedCategory, setSelectedCategory] = useState('')
-  const [newCategory, setNewCategory] = useState({ name: '' })
-  const [newSubcategory, setNewSubcategory] = useState({ name: '', imageUrl: '' })
-  const [editingCategory, setEditingCategory] = useState(null)
-  const [editingSubcategory, setEditingSubcategory] = useState(null)
+  // Get all data and functions directly from the context
+  const {
+    categories,
+    loading,
+    addCategory,
+    updateCategory,
+    deleteCategory,
+    addSubcategory,
+    deleteSubcategory
+  } = useCategories();
 
+  const { products } = useProducts();
 
-  
-  // Fetch categories from backend API
-  useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        setLoading(true)
-        const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL;
-        const response = await fetch(`${API_BASE}/api/categories`);
-        if (response.ok) {
-          const data = await response.json()
-          // Filter main categories (those without parentId) and group their subcategories
-          const mainCategories = data.filter(category => !category.parentId)
-          const categoriesWithSubcategories = mainCategories.map(category => ({
-            ...category,
-            subcategories: data.filter(sub => sub.parentId === category.id)
-          }))
-          
-          setCategories(categoriesWithSubcategories)
-        } else {
-          console.error('Failed to fetch categories')
-          setCategories([])
-        }
-      } catch (error) {
-        console.error('Error fetching categories:', error)
-        setCategories([])
-      } finally {
-        setLoading(false)
-      }
-    }
-    fetchCategories()
-  }, [])
+  // State for managing UI forms and inputs
+  const [showAddCategoryForm, setShowAddCategoryForm] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
 
-  // ✅ Add Category
+  const [addingSubTo, setAddingSubTo] = useState(null);
+  const [newSubcategoryName, setNewSubcategoryName] = useState('');
+
+  const [editingCatId, setEditingCatId] = useState(null);
+  const [editingCatName, setEditingCatName] = useState('');
+
+  // --- Event Handlers ---
+
   const handleAddCategory = async (e) => {
-    e.preventDefault()
-    try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/categories`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: newCategory.name
-        })
-      })
-      
-      if (response.ok) {
-        const newCategoryData = await response.json()
-        // Ensure new category has subcategories array
-        const categoryWithSubcategories = {
-          ...newCategoryData,
-          subcategories: []
-        }
-        setCategories([...categories, categoryWithSubcategories])
-        setNewCategory({ name: '' })
-        setShowAddCategory(false)
-      } else {
-        console.error('Failed to add category')
-      }
-    } catch (error) {
-      console.error('Error adding category:', error)
+    e.preventDefault();
+    if (!newCategoryName.trim()) return;
+    await addCategory({ name: newCategoryName.trim() });
+    setNewCategoryName('');
+    setShowAddCategoryForm(false);
+  };
+
+  const handleEditCategoryClick = (category) => {
+    setEditingCatId(category.id);
+    setEditingCatName(category.name);
+  };
+
+  const handleSaveCategory = async (id) => {
+    if (!editingCatName.trim()) return;
+    await updateCategory(id, { name: editingCatName.trim() });
+    setEditingCatId(null);
+    setEditingCatName('');
+  };
+
+  const handleDeleteCategoryClick = (id, name) => {
+    if (window.confirm(`Are you sure you want to delete the category "${name}"? This will also remove its subcategories.`)) {
+      deleteCategory(id);
     }
-  }
+  };
 
-  // ✅ Add Subcategory
-  const handleAddSubcategory = async (e) => {
-    e.preventDefault()
-    if (!selectedCategory) return
+  const handleAddSubcategory = async (e, parentId) => {
+    e.preventDefault();
+    if (!newSubcategoryName.trim()) return;
+    await addSubcategory(parentId, newSubcategoryName.trim());
+    setNewSubcategoryName('');
+    setAddingSubTo(null);
+  };
 
-    try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/categories`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: newSubcategory.name,
-          parentId: selectedCategory,
-          imageUrl: newSubcategory.imageUrl || ''
-        })
-      })
-      
-      if (response.ok) {
-        const newSubcategoryData = await response.json()
-        // Refresh categories to get the updated list with subcategories
-        const fetchCategories = async () => {
-          try {
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/categories`)
-            if (response.ok) {
-              const data = await response.json()
-              // Filter main categories (those without parentId) and group their subcategories
-              const mainCategories = data.filter(category => !category.parentId)
-              const categoriesWithSubcategories = mainCategories.map(category => ({
-                ...category,
-                subcategories: data.filter(sub => sub.parentId === category.id)
-              }))
-              setCategories(categoriesWithSubcategories)
-            }
-          } catch (error) {
-            console.error('Error fetching categories:', error)
-          }
-        }
-        await fetchCategories()
-        setNewSubcategory({ name: '', imageUrl: '' })
-        setShowAddSubcategory(false)
-      } else {
-        console.error('Failed to add subcategory')
-      }
-    } catch (error) {
-      console.error('Error adding subcategory:', error)
-    }
-  }
-
-  // ✅ Edit Category
-  const handleEditCategory = (e) => {
-    e.preventDefault()
-    const updatedCategories = categories.map(category => {
-      if (category.id === editingCategory.id) {
-        return {
-          ...category,
-          name: editingCategory.name,
-        }
-      }
-      return category
-    })
-    setCategories(updatedCategories)
-    setEditingCategory(null)
-  }
-
-  // ✅ Edit Subcategory
-  const handleEditSubcategory = (e) => {
-    e.preventDefault()
-    const updatedCategories = categories.map(category => {
-      if (category.id === editingSubcategory.categoryId) {
-        return {
-          ...category,
-          subcategories: category.subcategories.map(sub => {
-            if (sub.id === editingSubcategory.id) {
-              return {
-                ...sub,
-                name: editingSubcategory.name,
-                imageUrl: editingSubcategory.imageUrl
-              }
-            }
-            return sub
-          })
-        }
-      }
-      return category
-    })
-    setCategories(updatedCategories)
-    setEditingSubcategory(null)
-  }
-
-  // ✅ Delete Category
-  const handleDeleteCategory = (id) => {
-    if (window.confirm('Delete this category and all its subcategories?')) {
-      setCategories(categories.filter(category => category.id !== id))
-    }
-  }
-
-  // ✅ Delete Subcategory
-  const handleDeleteSubcategory = (categoryId, subcategoryId) => {
-    if (window.confirm('Delete this subcategory?')) {
-      const updatedCategories = categories.map(category => {
-        if (category.id === categoryId) {
-          return {
-            ...category,
-            subcategories: category.subcategories.filter(sub => sub.id !== subcategoryId)
-          }
-        }
-        return category
-      })
-      setCategories(updatedCategories)
-    }
+  // Show a loading spinner while data is being fetched
+  if (loading) {
+    return <LoadingSpinner />;
   }
 
   return (
-    <div className="md:ml-64 pt-16">
-      <div className="p-6">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-semibold text-gray-800">Category Management</h2>
-          <div className="flex space-x-4">
-            <button className="btn-secondary" onClick={() => setShowAddSubcategory(true)}>
-              Add Subcategory
-            </button>
-            <button className="btn-primary" onClick={() => setShowAddCategory(true)}>
-              Add Category
-            </button>
-          </div>
+    <div className="w-full">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold text-gray-800">Category Management</h1>
+        {!showAddCategoryForm && (
+          <button className="btn-primary flex items-center" onClick={() => setShowAddCategoryForm(true)}>
+            <PlusIcon className="w-5 h-5 mr-2" /> Add New Category
+          </button>
+        )}
+      </div>
+
+      {/* Form for adding a new category */}
+      {showAddCategoryForm && (
+        <div className="bg-white p-4 rounded-lg shadow-md mb-6">
+          <h3 className="text-lg font-medium mb-2">Add New Category</h3>
+          <form onSubmit={handleAddCategory} className="flex items-center gap-4">
+            <input
+              type="text"
+              placeholder="Category Name"
+              value={newCategoryName}
+              onChange={(e) => setNewCategoryName(e.target.value)}
+              className="input-style !mt-0 flex-grow"
+              required
+              autoFocus
+            />
+            <div className="flex gap-2">
+              <button type="submit" className="btn-primary">Save</button>
+              <button type="button" className="btn-secondary" onClick={() => setShowAddCategoryForm(false)}>
+                Cancel
+              </button>
+            </div>
+          </form>
         </div>
+      )}
 
-        {/* Add Category Form */}
-        {showAddCategory && (
-          <div className="bg-white rounded-lg shadow p-6 mb-6">
-            <h3 className="text-lg font-medium text-gray-800 mb-4">Add New Category</h3>
-            <form onSubmit={handleAddCategory} className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Category Name</label>
+      {/* List of all categories */}
+      <div className="space-y-8">
+        {categories.map(category => (
+          <div key={category.id} className="bg-white shadow-md rounded-lg overflow-hidden">
+            {/* Main Category Header with Edit/Delete */}
+            <div className="p-4 border-b flex justify-between items-center bg-gray-50">
+              {editingCatId === category.id ? (
                 <input
                   type="text"
-                  value={newCategory.name}
-                  onChange={(e) => setNewCategory({ ...newCategory, name: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                  required
+                  value={editingCatName}
+                  onChange={(e) => setEditingCatName(e.target.value)}
+                  className="input-style !mt-0 text-xl font-semibold"
+                  onKeyDown={(e) => e.key === 'Enter' && handleSaveCategory(category.id)}
+                  autoFocus
                 />
+              ) : (
+                <h2 className="text-xl font-semibold text-gray-800">{category.name}</h2>
+              )}
+              <div className="flex items-center space-x-4">
+                {editingCatId === category.id ? (
+                  <>
+                    <button onClick={() => handleSaveCategory(category.id)} className="text-green-600 hover:text-green-800"><CheckIcon className="w-6 h-6" /></button>
+                    <button onClick={() => setEditingCatId(null)} className="text-red-500 hover:text-red-700"><XMarkIcon className="w-6 h-6" /></button>
+                  </>
+                ) : (
+                  <>
+                    <button onClick={() => handleEditCategoryClick(category)} className="text-gray-500 hover:text-indigo-600"><PencilIcon className="w-5 h-5" /></button>
+                    <button onClick={() => handleDeleteCategoryClick(category.id, category.name)} className="text-gray-500 hover:text-red-600"><TrashIcon className="w-5 h-5" /></button>
+                  </>
+                )}
               </div>
-             
-              <div className="md:col-span-2 flex justify-end space-x-3">
-                <button type="button" className="btn-secondary" onClick={() => setShowAddCategory(false)}>Cancel</button>
-                <button type="submit" className="btn-primary">Add Category</button>
-              </div>
-            </form>
-          </div>
-        )}
+            </div>
 
-        {/* Add Subcategory Form */}
-        {showAddSubcategory && (
-          <div className="bg-white rounded-lg shadow p-6 mb-6">
-            <h3 className="text-lg font-medium text-gray-800 mb-4">Add New Subcategory</h3>
-            <form onSubmit={handleAddSubcategory} className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-                <select
-                  value={selectedCategory}
-                  onChange={(e) => setSelectedCategory(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                  required
-                >
-                  <option value="">Select category</option>
-                  {categories.map(category => (
-                    <option key={category.id} value={category.id}>{category.name}</option>
-                  ))}
-                </select>
+            {/* Subcategories Section with Delete */}
+            <div className="p-4 pt-3 border-b">
+              <h3 className="text-sm font-medium text-gray-600 mb-2">Subcategories:</h3>
+              <div className="flex flex-wrap items-center gap-2">
+                {(category.subcategories || []).map(sub => (
+                  <span key={sub.id} className="inline-flex items-center group bg-indigo-50 text-indigo-700 text-sm font-medium px-3 py-1 rounded-full">
+                    {sub.name}
+                    <button onClick={() => deleteSubcategory(category.id, sub.id)} className="ml-2 text-red-400 hover:text-red-700 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <XMarkIcon className="w-4 h-4" />
+                    </button>
+                  </span>
+                ))}
+                <button onClick={() => setAddingSubTo(category.id)} className="text-sm text-indigo-600 hover:underline hover:text-indigo-800">
+                  + Add
+                </button>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Subcategory Name</label>
-                <input
-                  type="text"
-                  value={newSubcategory.name}
-                  onChange={(e) => setNewSubcategory({ ...newSubcategory, name: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                  required
-                  disabled={!selectedCategory}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Image URL</label>
-                <input
-                  type="url"
-                  value={newSubcategory.imageUrl}
-                  onChange={(e) => setNewSubcategory({ ...newSubcategory, imageUrl: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                  disabled={!selectedCategory}
-                />
-              </div>
-              <div className="md:col-span-2 flex justify-end space-x-3">
-                <button type="button" className="btn-secondary" onClick={() => setShowAddSubcategory(false)}>Cancel</button>
-                <button type="submit" className="btn-primary" disabled={!selectedCategory}>Add Subcategory</button>
-              </div>
-            </form>
-          </div>
-        )}
+            </div>
 
-        {/* Categories List */}
-        <div className="bg-white shadow rounded-lg overflow-hidden">
-          <div className="px-4 py-5 border-b border-gray-200">
-            <h3 className="text-lg font-medium text-gray-800">Categories & Subcategories</h3>
-          </div>
-          <div className="px-4 py-5">
-            {loading ? (
-              <div className="text-center py-8">
-                <p className="text-gray-500">Loading categories...</p>
-              </div>
-            ) : (
-              <div className="space-y-6">
-                {categories.map(category => (
-                <div key={category.id} className="border rounded-lg p-4">
-                  {/* ✅ Edit Category Mode */}
-                  {editingCategory && editingCategory.id === category.id ? (
-                    <form onSubmit={handleEditCategory} className="space-y-3">
-                      <input
-                        type="text"
-                        value={editingCategory.name}
-                        onChange={(e) =>
-                          setEditingCategory({ ...editingCategory, name: e.target.value })
-                        }
-                        className="w-full px-3 py-2 border rounded-md"
-                        required
-                      />
-                      
-                      <div className="flex space-x-2">
-                        <button type="submit" className="btn-primary">Save</button>
-                        <button type="button" className="btn-secondary" onClick={() => setEditingCategory(null)}>Cancel</button>
-                      </div>
-                    </form>
-                  ) : (
-                    <div className="flex justify-between items-center mb-3">
-                      <div className="flex items-center space-x-3">
-                        {category.imageUrl && <image src={category.imageUrl} alt={category.name} className="w-12 h-12 object-cover rounded" />}
-                        <h4 className="text-lg font-medium">{category.name}</h4>
-                      </div>
-                      <div className="flex space-x-2">
-                        <button className="text-indigo-600 text-sm" onClick={() => setEditingCategory(category)}>Edit</button>
-                        <button className="text-red-600 text-sm" onClick={() => handleDeleteCategory(category.id)}>Delete</button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Subcategories */}
-                  <div className="pl-4">
-                    <h5 className="text-sm font-medium text-gray-700 mb-2">Subcategories:</h5>
-                    {category.subcategories && category.subcategories.length > 0 ? (
-                      <ul className="space-y-2">
-                        {category.subcategories.map(sub => (
-                          <li key={sub.id} className="flex justify-between items-center">
-                            {/* ✅ Edit Subcategory Mode */}
-                            {editingSubcategory && editingSubcategory.id === sub.id ? (
-                              <form onSubmit={handleEditSubcategory} className="flex items-center space-x-2 w-full">
-                                <input
-                                  type="text"
-                                  value={editingSubcategory.name}
-                                  onChange={(e) =>
-                                    setEditingSubcategory({ ...editingSubcategory, name: e.target.value })
-                                  }
-                                  className="px-2 py-1 border rounded-md flex-1"
-                                  required
-                                />
-                                <input
-                                  type="url"
-                                  value={editingSubcategory.imageUrl}
-                                  onChange={(e) =>
-                                    setEditingSubcategory({ ...editingSubcategory, imageUrl: e.target.value })
-                                  }
-                                  className="px-2 py-1 border rounded-md flex-1"
-                                />
-                                <div className="flex space-x-2">
-                                  <button type="submit" className="btn-primary">Save</button>
-                                  <button type="button" className="btn-secondary" onClick={() => setEditingSubcategory(null)}>Cancel</button>
-                                </div>
-                              </form>
-                            ) : (
-                              <>
-                                <div className="flex items-center space-x-2">
-                                  {sub.imageUrl && <image src={sub.imageUrl} alt={sub.name} className="w-8 h-8 object-cover rounded" />}
-                                  <span>{sub.name}</span>
-                                </div>
-                                <div className="flex space-x-2">
-                                  <button className="text-indigo-600 text-sm" onClick={() => setEditingSubcategory({ ...sub, categoryId: category.id })}>Edit</button>
-                                  <button className="text-red-600 text-sm" onClick={() => handleDeleteSubcategory(category.id, sub.id)}>Delete</button>
-                                </div>
-                              </>
-                            )}
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="text-gray-500 text-sm">No subcategories yet.</p>
-                    )}
+            {/* Form for Adding a Subcategory */}
+            {addingSubTo === category.id && (
+              <div className="p-4 bg-gray-50 border-b">
+                <form onSubmit={(e) => handleAddSubcategory(e, category.id)} className="flex items-center gap-3">
+                  <input
+                    type="text"
+                    placeholder="New Subcategory Name"
+                    value={newSubcategoryName}
+                    onChange={(e) => setNewSubcategoryName(e.target.value)}
+                    className="input-style !mt-0 flex-grow"
+                    required
+                    autoFocus
+                  />
+                  <div className="flex-shrink-0 flex gap-2">
+                    <button type="submit" className="btn-primary">Save</button>
+                    <button type="button" className="btn-secondary" onClick={() => { setAddingSubTo(null); setNewSubcategoryName(''); }}>Cancel</button>
                   </div>
-                </div>
-              ))}
+                </form>
               </div>
             )}
-          </div>
-        </div>
 
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SKU</th>
+                    <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {category.subcategories.map(sub => {
+                    const productsInSubcategory = products.filter(
+                      p => p.category === category.name && p.subcategory === sub.name && p.status === 'active'
+                    );
+
+                    return (
+                      <React.Fragment key={sub.id}>
+                        <tr className="bg-gray-100"><td colSpan="3" className="px-6 py-2 text-sm font-semibold text-gray-800">{sub.name}</td></tr>
+                        {productsInSubcategory.length > 0 ? (
+                          productsInSubcategory.map(p => (
+                            <tr key={p.id} className="hover:bg-gray-50">
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="flex items-center gap-3">
+                                  <img src={p.imageUrl || `https://placehold.co/70x70/E0E7FF/4F46E5?text=${p.name.charAt(0)}`} alt={p.name} className="h-12 w-12 rounded-md object-cover border border-gray-200" />
+                                  <span className="font-medium text-gray-900">{p.name}</span>
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700"><span className="font-mono text-xs bg-gray-100 text-gray-800 px-2 py-1 rounded-md">{p.sku}</span></td>
+                              <td className="px-6 py-4 whitespace-nowrap text-right"><Link href={`/products/${p.id}`} className="btn-secondary-sm">View</Link></td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr><td colSpan="3" className="px-6 py-4 text-center text-sm text-gray-500 bg-gray-50">No active products in this subcategory.</td></tr>
+                        )}
+                      </React.Fragment>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ))}
       </div>
-    </div>
-  )
+    </div>
+  );
 }

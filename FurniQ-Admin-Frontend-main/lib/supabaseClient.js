@@ -1,9 +1,11 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = 'https://cekaxlsuemkcqgzgiigw.supabase.co'
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNla2F4bHN1ZW1rY3FnemdpaWd3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY0NTEyNTUsImV4cCI6MjA3MjAyNzI1NX0.H3Kt29bLSKuvLgXLqCCAaucrQXmKzVdVkF_-rXp5zv0'
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+if (!supabaseUrl || !supabaseAnonKey) {
+  // eslint-disable-next-line no-console
+  console.warn('Supabase env vars missing: set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY')
+}
 
-//Furniq-project
-//Furniq123@#
+export const supabase = createClient(supabaseUrl || '', supabaseAnonKey || '')

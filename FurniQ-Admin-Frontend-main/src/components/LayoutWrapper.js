@@ -1,68 +1,41 @@
-// src/components/LayoutWrapper.js
-"use client";
+'use client'
 
-import { usePathname, useRouter } from "next/navigation";
-import { useEffect } from "react";
-import Sidebar from "@/components/Sidebar";
-import Header from "@/components/Header";
+import { useState, useEffect } from 'react';
+import Header from './Header'; // Ensure this path is correct for your project structure
+
+// A list of routes where the main layout (Header, etc.) should NOT be displayed.
+const noLayoutRoutes = ['/login', '/register', '/reset-password'];
 
 export default function LayoutWrapper({ children }) {
-  const pathname = usePathname();
-  const router = useRouter();
-  const hideLayout = pathname === "/login" || pathname === "/register" || pathname === "/reset-password";
+  // We use state to hold the pathname. It starts empty on the server.
+  const [pathname, setPathname] = useState('');
 
-  // Session timeout: 5 hours
-  const SESSION_TIMEOUT = 5 * 60 * 60 * 1000;
-
+  // This useEffect hook runs only on the client-side after the component mounts.
   useEffect(() => {
-    if (hideLayout) return;
+    // We safely access window.location.pathname here, which is guaranteed to be available.
+    // This replaces the usePathname() hook and resolves the Vercel compatibility issue.
+    if (typeof window !== 'undefined') {
+      setPathname(window.location.pathname);
+    }
+  }, []);
 
-    const ensureAuthAndTimeout = () => {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
-      if (!token) {
-        router.replace('/login');
-        return;
-      }
-      const last = typeof window !== 'undefined' ? localStorage.getItem('lastActivity') : null;
-      if (last) {
-        const elapsed = Date.now() - parseInt(last);
-        if (elapsed > SESSION_TIMEOUT) {
-          localStorage.removeItem('authToken');
-          localStorage.removeItem('userData');
-          localStorage.removeItem('lastActivity');
-          router.replace('/login');
-          return;
-        }
-      }
-    };
+  // If the current path is one of the auth pages, we render only the page content.
+  if (noLayoutRoutes.includes(pathname)) {
+    return <>{children}</>;
+  }
 
-    const updateLast = () => {
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('lastActivity', Date.now().toString());
-      }
-    };
-
-    ensureAuthAndTimeout();
-    const events = ['mousedown','mousemove','keypress','scroll','touchstart','click'];
-    events.forEach(e => document.addEventListener(e, updateLast, true));
-    const interval = setInterval(ensureAuthAndTimeout, 60000);
-    return () => {
-      events.forEach(e => document.removeEventListener(e, updateLast, true));
-      clearInterval(interval);
-    };
-  }, [hideLayout, router]);
-
-  if (hideLayout) return <>{children}</>;
-
+  // For all other pages, we render the full layout with the Header.
   return (
-    <div className="flex">
-      <Sidebar />
-      <div className="flex flex-col flex-1 min-h-screen">
-        <Header />
-        <main className="flex-1 overflow-x-hidden overflow-y-auto pt-16 md:pt-0">
-          <div className="p-4 md:p-6">{children}</div>
-        </main>
-      </div>
-    </div>
+    <>
+      <Header />
+      
+      {/* This is the main content area for your application.
+        The top padding (pt-20) ensures content is not hidden behind the fixed Header.
+      */}
+      <main className="pt-20 p-6 bg-gray-100 min-h-screen">
+        {children}
+      </main>
+    </>
   );
 }
+

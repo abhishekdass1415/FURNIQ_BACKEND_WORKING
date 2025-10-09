@@ -1,7 +1,6 @@
 import "./globals.css";
 import LayoutWrapper from "@/components/LayoutWrapper";
-import { InventoryProvider } from "@/context/Inventorycontext";
-import { ProductProvider } from "@/context/ProductContext"; // added
+import { AuthProvider } from "@/context/AuthContext"; // 1. Import the AuthProvider
 
 export const metadata = {
   title: "Furniq Furniture Admin",
@@ -11,13 +10,13 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body className="bg-[var(--light)] text-[var(--dark)]">
-        <InventoryProvider>
-          <ProductProvider> {/* added */}
-            <LayoutWrapper>{children}</LayoutWrapper>
-          </ProductProvider>
-        </InventoryProvider>
+      <body className="bg-gray-100 text-gray-900">
+        {/* 2. Wrap the entire application with the AuthProvider */}
+        <AuthProvider>
+          <LayoutWrapper>{children}</LayoutWrapper>
+        </AuthProvider>
       </body>
     </html>
   );
 }
+

@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useAuth } from '@/context/AuthContext'
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline'
 
 export default function Login() {
@@ -10,39 +11,22 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const [showPassword, setShowPassword] = useState(false)
-  const router = useRouter()
+  const { login } = useAuth(); // Get the login function from context
 
-  const handleLogin = (e) => {
-    e.preventDefault()
-    setIsLoading(true)
-    setError('')
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError('');
 
-    try {
-      // Get stored user from localStorage
-      const storedUser = JSON.parse(localStorage.getItem('userData'))
-      if (!storedUser) {
-        setError('No registered user found. Please register first.')
-        setIsLoading(false)
-        return
-      }
+    // Call the login function from the AuthContext
+    const result = await login(email, password);
 
-      if (email !== storedUser.email || password !== storedUser.password) {
-        setError('Incorrect email or password')
-        setIsLoading(false)
-        return
-      }
+    setIsLoading(false);
 
-      // Login success
-      localStorage.setItem('userData', JSON.stringify(storedUser))
-      localStorage.setItem('authToken', 'local-demo-token')
-      localStorage.setItem('lastActivity', Date.now().toString())
-      router.push('/products') // redirect to products first
-    } catch (err) {
-      console.error('Login error:', err)
-      setError('Login failed. Please try again.')
-    } finally {
-      setIsLoading(false)
+    if (!result.success) {
+      setError(result.message || 'Incorrect email or password');
     }
+    // On success, the context will handle the redirect automatically
   }
 
   return (
@@ -62,9 +46,7 @@ export default function Login() {
 
         <form onSubmit={handleLogin}>
           <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Email
-            </label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
             <input
               type="email"
               value={email}
@@ -77,9 +59,7 @@ export default function Login() {
           </div>
 
           <div className="mb-2 relative">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Password
-            </label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Password</label>
             <input
               type={showPassword ? 'text' : 'password'}
               value={password}
@@ -89,29 +69,18 @@ export default function Login() {
               required
               disabled={isLoading}
             />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-9 text-gray-500"
-            >
+            <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-9 text-gray-500">
               {showPassword ? <EyeSlashIcon className="w-5 h-5" /> : <EyeIcon className="w-5 h-5" />}
             </button>
           </div>
 
           <div className="text-right mb-6">
-            <a
-              href="/reset-password"
-              className="text-sm text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300"
-            >
+            <a href="/reset-password" className="text-sm text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300">
               Forgot password?
             </a>
           </div>
 
-          <button
-            type="submit"
-            className="w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
-            disabled={isLoading}
-          >
+          <button type="submit" className="w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed" disabled={isLoading}>
             {isLoading ? 'Signing in...' : 'Sign In'}
           </button>
         </form>
@@ -119,12 +88,7 @@ export default function Login() {
         <div className="mt-6 text-center">
           <p className="text-sm text-gray-600 dark:text-gray-400">
             Don&apos;t have an account?
-            <a
-              href="/register"
-              className="font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300"
-            >
-              Register here
-            </a>
+            <a href="/register" className="font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300"> Register here</a>
           </p>
         </div>
       </div>
