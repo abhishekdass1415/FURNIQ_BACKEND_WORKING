@@ -1,7 +1,11 @@
 'use client';
+'use client';
 
 import { useState, useEffect } from 'react';
 import { PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
+
+
+import Link from 'next/link';
 
 // This is now a dynamic, reusable component that fetches its own data.
 export default function ProductList() {
@@ -146,9 +150,6 @@ export default function ProductList() {
     </div>
   );
 }
-'use client'
-
-import Link from 'next/link';
 
 /**
  * A reusable component to display a list of products in a table.

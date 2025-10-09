@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
 import prisma from '../../config/prismaConfig';
 import { verify } from 'jsonwebtoken';
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/context/AuthContext'; // Import the AuthContext
+import { CameraIcon, PencilIcon, CheckIcon, XMarkIcon } from '@heroicons/react/24/outline'
 
 // --- GET The Logged-In User's Profile ---
 export async function GET(request) {
@@ -97,10 +101,7 @@ export async function PUT(request) {
     return NextResponse.json({ error: 'Failed to update user profile.' }, { status: 500 });
   }
 }
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/context/AuthContext'; // Import the AuthContext
-import { CameraIcon, PencilIcon, CheckIcon, XMarkIcon } from '@heroicons/react/24/outline'
+
 
 export default function Profile() {
   const { user, loading, updateProfile } = useAuth(); // Get user and functions from context
