@@ -90,9 +90,16 @@ app.use("*", (req, res) => {
   });
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
-  console.log(`📊 API Documentation: http://localhost:${PORT}/api/status`);
-  console.log(`🌐 Frontend URL: ${process.env.FRONTEND_URL || "http://localhost:3000"}`);
-});
+// On Vercel, we export the app as the default handler instead of listening
+const isVercel = !!process.env.VERCEL;
+
+if (!isVercel) {
+  // Start server locally or on traditional hosts
+  app.listen(PORT, () => {
+    console.log(`🚀 Server running on http://localhost:${PORT}`);
+    console.log(`📊 API Documentation: http://localhost:${PORT}/api/status`);
+    console.log(`🌐 Frontend URL: ${process.env.FRONTEND_URL || "http://localhost:3000"}`);
+  });
+}
+
+export default app;
