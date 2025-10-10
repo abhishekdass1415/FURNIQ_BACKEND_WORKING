@@ -1,3 +1,5 @@
+'use client'
+
 import { NextResponse } from 'next/server';
 import prisma from '../../config/prismaConfig';
 import { verify } from 'jsonwebtoken';
